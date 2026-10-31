@@ -50,10 +50,10 @@ public class CashbackTelegramBot extends TelegramLongPollingBot {
         return botProperties.getBotUsername();
     }
 
-    @Override
-    public String getBotToken() {
-        return botProperties.getBotToken();
-    }
+//    @Override
+//    public String getBotToken() {
+//        return botProperties.getBotToken();
+//    }
 
     @Override
     public void onUpdateReceived(Update update) {

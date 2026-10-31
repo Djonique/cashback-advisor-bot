@@ -38,7 +38,8 @@ CREATE TABLE bank_category_mcc (
     bank_category_id BIGINT    NOT NULL,
     mcc_code         CHAR(4)   NOT NULL,
     CONSTRAINT fk_bcm_bank_category FOREIGN KEY (bank_category_id) REFERENCES bank_category(id) ON DELETE CASCADE,
-    CONSTRAINT chk_bcm_mcc_format CHECK (mcc_code ~ '^[0-9]{4}$')
+    CONSTRAINT chk_bcm_mcc_format CHECK (mcc_code ~ '^[0-9]{4}$'),
+    CONSTRAINT ux_bcm_pair UNIQUE (bank_category_id, mcc_code)
 );
 COMMENT ON TABLE  bank_category_mcc          IS 'MCC-коды, относящиеся к категории конкретного банка';
 COMMENT ON COLUMN bank_category_mcc.mcc_code IS 'Строка из 4 цифр с ведущими нулями, например 0763';

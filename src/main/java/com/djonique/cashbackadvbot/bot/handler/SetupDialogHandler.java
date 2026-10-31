@@ -71,7 +71,7 @@ public class SetupDialogHandler {
             return;
         }
 
-        Long categoryId = pendingCategories.get(0);
+        Long categoryId = pendingCategories.getFirst();
         String categoryName = categoryRepository.findById(categoryId)
                 .map(Category::getName)
                 .orElse(null);
@@ -79,7 +79,7 @@ public class SetupDialogHandler {
         if (categoryName == null) {
             log.warn("Категория из контекста не найдена: categoryId={}, пропускаем", categoryId);
             List<Long> remaining = new ArrayList<>(pendingCategories);
-            remaining.remove(0);
+            remaining.removeFirst();
             SelectionContext updatedContext = new SelectionContext(
                     context.bankId(),
                     context.selectedCategoryIds(),
@@ -109,7 +109,7 @@ public class SetupDialogHandler {
             return;
         }
 
-        Long categoryId = context.pendingCategories().get(0);
+        Long categoryId = context.pendingCategories().getFirst();
 
         Map<Long, BigDecimal> percents = context.percents() == null
                 ? new HashMap<>()
@@ -117,7 +117,7 @@ public class SetupDialogHandler {
         percents.put(categoryId, percent);
 
         List<Long> pendingCategories = new ArrayList<>(context.pendingCategories());
-        pendingCategories.remove(0);
+        pendingCategories.removeFirst();
 
         SelectionContext updatedContext = new SelectionContext(
                 context.bankId(),

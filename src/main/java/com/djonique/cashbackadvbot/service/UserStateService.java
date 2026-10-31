@@ -49,7 +49,7 @@ public class UserStateService {
     public <T> Optional<T> getContext(AppUser user, Class<T> type) {
         return userStateRepository.findById(user.getId())
                 .map(UserState::getContext)
-                .filter(json -> json != null && !json.isBlank())
+                .filter(json -> !json.isBlank())
                 .map(json -> deserialize(json, type));
     }
 
