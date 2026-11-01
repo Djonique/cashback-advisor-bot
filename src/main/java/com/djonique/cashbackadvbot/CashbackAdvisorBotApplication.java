@@ -11,8 +11,8 @@ import org.springframework.context.annotation.Configuration;
 @EnableConfigurationProperties(BotProperties.class)
 public class CashbackAdvisorBotApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(CashbackAdvisorBotApplication.class, args);
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(CashbackAdvisorBotApplication.class, args);
+    }
 
 }

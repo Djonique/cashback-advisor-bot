@@ -10,12 +10,6 @@ import com.djonique.cashbackadvbot.repository.BankRepository;
 import com.djonique.cashbackadvbot.repository.CategoryRepository;
 import com.djonique.cashbackadvbot.service.SelectionService;
 import com.djonique.cashbackadvbot.service.UserStateService;
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -23,6 +17,9 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.bots.AbsSender;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+
+import java.math.BigDecimal;
+import java.util.*;
 
 @Component
 @RequiredArgsConstructor

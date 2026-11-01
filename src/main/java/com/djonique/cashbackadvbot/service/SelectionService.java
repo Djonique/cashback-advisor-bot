@@ -10,16 +10,17 @@ import com.djonique.cashbackadvbot.exception.ValidationException;
 import com.djonique.cashbackadvbot.repository.BankCategoryRepository;
 import com.djonique.cashbackadvbot.repository.UserBankSelectionRepository;
 import jakarta.persistence.EntityManager;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.math.BigDecimal;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor

@@ -4,15 +4,16 @@ import com.djonique.cashbackadvbot.bot.state.DialogState;
 import com.djonique.cashbackadvbot.domain.AppUser;
 import com.djonique.cashbackadvbot.domain.UserState;
 import com.djonique.cashbackadvbot.repository.UserStateRepository;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
+
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor

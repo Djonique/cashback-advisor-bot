@@ -2,11 +2,12 @@ package com.djonique.cashbackadvbot.bot.keyboard;
 
 import com.djonique.cashbackadvbot.domain.Bank;
 import com.djonique.cashbackadvbot.domain.BankCategory;
-import java.util.List;
-import java.util.Set;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+
+import java.util.List;
+import java.util.Set;
 
 @Component
 public class KeyboardFactory {
@@ -24,7 +25,7 @@ public class KeyboardFactory {
     public InlineKeyboardMarkup getMainMenuKeyboard() {
         return InlineKeyboardMarkup.builder()
                 .keyboardRow(List.of(button("💳 Выбрать карту для оплаты", CALLBACK_CHOOSE)))
-                .keyboardRow(List.of(button("⚙️ Настроить кэшбэк", CALLBACK_SETUP)))
+                .keyboardRow(List.of(button("⚙️ Настроить кешбэк", CALLBACK_SETUP)))
                 .keyboardRow(List.of(button("❤️ Поддержать проект", CALLBACK_SUPPORT)))
                 .build();
     }

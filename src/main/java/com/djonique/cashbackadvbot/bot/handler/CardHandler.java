@@ -6,8 +6,6 @@ import com.djonique.cashbackadvbot.domain.AppUser;
 import com.djonique.cashbackadvbot.dto.RecommendationDto;
 import com.djonique.cashbackadvbot.service.CashbackAdvisorService;
 import com.djonique.cashbackadvbot.service.UserStateService;
-import java.math.BigDecimal;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -15,6 +13,9 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.bots.AbsSender;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+
+import java.math.BigDecimal;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -24,7 +25,7 @@ public class CardHandler {
     private static final String INVALID_MCC_TEXT =
             "Ошибка: MCC-код должен состоять из 4 цифр. Попробуйте еще раз.";
     private static final String NOT_FOUND_TEXT =
-            "По вашему запросу ничего не найдено. Возможно, вы не настроили кэшбэк на этот месяц.";
+            "По вашему запросу ничего не найдено. Возможно, вы не настроили кешбэк на этот месяц.";
     private static final String[] MEDALS = {"🥇", "🥈", "🥉"};
 
     private final CashbackAdvisorService cashbackAdvisorService;

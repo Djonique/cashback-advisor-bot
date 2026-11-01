@@ -10,13 +10,6 @@ import com.djonique.cashbackadvbot.repository.BankCategoryRepository;
 import com.djonique.cashbackadvbot.repository.BankRepository;
 import com.djonique.cashbackadvbot.service.UserService;
 import com.djonique.cashbackadvbot.service.UserStateService;
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -30,17 +23,20 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import org.telegram.telegrambots.meta.bots.AbsSender;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.math.BigDecimal;
+import java.util.*;
+
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class MenuHandler {
 
     private static final String START_TEXT =
-            "Привет! Я помогу выбрать выгодную карту для оплаты. Выбери действие:";
-    private static final String MENU_TEXT = "Выбери действие:";
-    private static final String CHOOSE_BANK_TEXT = "Выберите банк, для которого хотите настроить кэшбэк:";
+            "Привет! Я помогу выбрать выгодную карту для оплаты. Выберите действие:";
+    private static final String MENU_TEXT = "Я помогу выбрать выгодную карту для оплаты. Выберите действие:";
+    private static final String CHOOSE_BANK_TEXT = "Выберите банк, для которого хотите настроить кешбэк:";
     private static final String CHOOSE_CATEGORIES_TEXT =
-            "Выберите категории для кэшбэка (нажмите на категорию, чтобы отметить):";
+            "Выберите категории для кешбэка (нажмите на категорию, чтобы отметить):";
     private static final String CHOOSE_SEARCH_TEXT = "Выберите способ поиска:";
     private static final String ENTER_CATEGORY_TEXT =
             "Введите название категории (например, Супермаркеты):";
@@ -133,7 +129,7 @@ public class MenuHandler {
 
         userStateService.setState(user, DialogState.CHOOSING_BANK, null);
         List<Bank> banks = bankRepository.findAllByOrderByDisplayOrderAsc();
-        log.info("Настройка кэшбэка: userId={}, доступно банков={}", user.getId(), banks.size());
+        log.info("Настройка кешбэка: userId={}, доступно банков={}", user.getId(), banks.size());
         sendMessage(getChatId(callbackQuery), CHOOSE_BANK_TEXT,
                 keyboardFactory.getBankListKeyboard(banks), sender);
         answerCallback(callbackQuery.getId(), null, sender);

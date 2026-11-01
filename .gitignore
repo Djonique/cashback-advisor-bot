@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# AI for OpenIDE — local agent state
+.aiforopenide/
+!.aiforopenide/config.json
