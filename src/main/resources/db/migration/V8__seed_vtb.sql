@@ -9,17 +9,22 @@ VALUES ('ВТБ', 'vtb', 6)
 ON CONFLICT (slug) DO NOTHING;
 
 -- 2. Привязываем существующие категории к банку
-INSERT INTO bank_category (bank_id, category_id)
-SELECT b.id, c.id FROM (
+INSERT INTO bank_category (bank_id, category_id, local_name)
+SELECT b.id, c.id, v.local_name FROM (
     VALUES
-    ('supermarkets'),('pharmacies'),('medical_clinics'),('restaurants'),('fastfood'),
-    ('clothes_shoes'),('kids_goods'),('transport'),('taxi'),('carsharing'),
-    ('beauty_spa'),('cosmetics'),('electronics'),('air_tickets'),('duty_free'),
-    ('hotels'),('railway_tickets'),('fuel'),('auto_services'),('home_repair'),
-    ('education'),('fitness'),('sport_goods'),('household_services'),('flowers'),
-    ('jewelry'),('vet_pets'),('digital_goods'),('entertainment'),('utilities'),
-    ('alcohol'),('art'),('books'),('telecom')
-) AS v(category_slug)
+    ('supermarkets', 'Супермаркеты'), ('pharmacies', 'Аптеки'), ('medical_clinics', 'Здоровье'),
+    ('restaurants', 'Кафе и рестораны'), ('fastfood', 'Фастфуд'), ('clothes_shoes', 'Одежда и обувь'),
+    ('kids_goods', 'Детские товары'), ('transport', 'Транспорт'), ('taxi', 'Такси'),
+    ('carsharing', 'Аренда авто'), ('beauty_spa', 'Красота'), ('cosmetics', 'Красота'),
+    ('electronics', 'Электроника'), ('air_tickets', 'Авиабилеты'), ('duty_free', 'Duty Free'),
+    ('hotels', 'Отели'), ('railway_tickets', 'Ж/д билеты'), ('fuel', 'АЗС'),
+    ('auto_services', 'Автоуслуги'), ('home_repair', 'Дом и ремонт'), ('education', 'Образование'),
+    ('fitness', 'Фитнес'), ('sport_goods', 'Спортивные товары'), ('household_services', 'Бытовые услуги'),
+    ('flowers', 'Цветы'), ('jewelry', 'Украшения и бижутерия'), ('vet_pets', 'Зоотовары'),
+    ('digital_goods', 'Цифровой контент'), ('entertainment', 'Развлечения и Театры'), ('utilities', 'Услуги ЖКХ'),
+    ('alcohol', 'Алкоголь'), ('art', 'Искусство'), ('books', 'Книги и канцтовары'),
+    ('telecom', 'Услуги связи')
+) AS v(category_slug, local_name)
 JOIN bank b ON b.slug = 'vtb'
 JOIN category c ON c.slug = v.category_slug
 ON CONFLICT (bank_id, category_id) DO NOTHING;

@@ -4,6 +4,7 @@ import com.djonique.cashbackadvbot.bot.CashbackTelegramBot;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,6 +16,8 @@ import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 @Configuration
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnProperty(prefix = "app.telegram", name = "registration-enabled",
+        havingValue = "true", matchIfMissing = true)
 public class BotConfig {
 
     private final ObjectProvider<TelegramBotsApi> telegramBotsApiProvider;

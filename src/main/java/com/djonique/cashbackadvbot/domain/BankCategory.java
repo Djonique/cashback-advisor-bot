@@ -23,4 +23,13 @@ public class BankCategory {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
+
+    @Column(name = "local_name", length = 100)
+    private String localName;
+
+    public String getDisplayName() {
+        return localName == null || localName.isBlank()
+                ? category.getName()
+                : localName;
+    }
 }

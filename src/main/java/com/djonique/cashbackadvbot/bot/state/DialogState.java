@@ -7,5 +7,6 @@ public enum DialogState {
     ENTERING_PERCENT,
     REVIEW,
     CARD_INPUT_MCC,
-    CARD_INPUT_CATEGORY
+    CARD_INPUT_CATEGORY,
+    CARD_INPUT_STORE
 }

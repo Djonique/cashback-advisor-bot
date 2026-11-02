@@ -2,6 +2,7 @@ package com.djonique.cashbackadvbot.service;
 
 import com.djonique.cashbackadvbot.domain.AppUser;
 import com.djonique.cashbackadvbot.domain.Bank;
+import com.djonique.cashbackadvbot.domain.CashbackPercent;
 import com.djonique.cashbackadvbot.domain.Category;
 import com.djonique.cashbackadvbot.domain.UserBankSelection;
 import com.djonique.cashbackadvbot.dto.ActiveSelectionDto;
@@ -15,10 +16,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -28,7 +29,6 @@ import java.util.stream.Collectors;
 public class SelectionService {
 
     private static final ZoneId MOSCOW_ZONE = ZoneId.of("Europe/Moscow");
-    private static final BigDecimal MAX_PERCENT = BigDecimal.valueOf(100);
 
     private final UserBankSelectionRepository userBankSelectionRepository;
     private final BankCategoryRepository bankCategoryRepository;
@@ -37,8 +37,12 @@ public class SelectionService {
     @Transactional(readOnly = true)
     public List<ActiveSelectionDto> getActiveSelections(Long userId) {
         String yearMonth = currentYearMonth();
-        return userBankSelectionRepository.findAllByUserIdAndYearMonth(userId, yearMonth).stream()
-                .map(this::toDto)
+        List<UserBankSelection> selections =
+                userBankSelectionRepository.findAllByUserIdAndYearMonth(userId, yearMonth);
+        Map<BankCategoryKey, String> localNames = loadLocalCategoryNames(selections);
+
+        return selections.stream()
+                .map(selection -> toDto(selection, localNames))
                 .toList();
     }
 
@@ -50,16 +54,13 @@ public class SelectionService {
         safeItems.forEach(this::validatePercent);
 
         if (!safeItems.isEmpty()) {
-            Set<Long> allowedCategoryIds = bankCategoryRepository.findAllByBankId(bankId).stream()
-                    .map(bankCategory -> bankCategory.getCategory().getId())
-                    .collect(Collectors.toSet());
+            Set<Long> allowedCategoryIds = bankCategoryRepository.findCategoryIdsByBankId(bankId);
             safeItems.forEach(item -> validateCategoryBelongsToBank(item, allowedCategoryIds));
         }
 
         log.info("Saving selection: userId={}, bankId={}, items={}", userId, bankId, safeItems);
 
-        userBankSelectionRepository.deleteAllByUserIdAndBankIdAndYearMonth(userId, bankId, yearMonth);
-        userBankSelectionRepository.flush();
+        userBankSelectionRepository.deleteSelection(userId, bankId, yearMonth);
 
         if (safeItems.isEmpty()) {
             log.info("Выборы очищены: userId={}, bankId={}, yearMonth={}", userId, bankId, yearMonth);
@@ -73,14 +74,34 @@ public class SelectionService {
         userBankSelectionRepository.saveAll(selections);
     }
 
-    private ActiveSelectionDto toDto(UserBankSelection selection) {
+    private Map<BankCategoryKey, String> loadLocalCategoryNames(List<UserBankSelection> selections) {
+        Set<Long> bankIds = selections.stream()
+                .map(selection -> selection.getBank().getId())
+                .collect(Collectors.toSet());
+        if (bankIds.isEmpty()) {
+            return Map.of();
+        }
+
+        return bankCategoryRepository.findAllByBankIdIn(bankIds).stream()
+                .collect(Collectors.toMap(
+                        bankCategory -> new BankCategoryKey(
+                                bankCategory.getBank().getId(),
+                                bankCategory.getCategory().getId()),
+                        bankCategory -> bankCategory.getDisplayName(),
+                        (first, second) -> first));
+    }
+
+    private ActiveSelectionDto toDto(UserBankSelection selection, Map<BankCategoryKey, String> localNames) {
         Bank bank = selection.getBank();
         Category category = selection.getCategory();
+        String categoryName = localNames.getOrDefault(
+                new BankCategoryKey(bank.getId(), category.getId()),
+                category.getName());
         return new ActiveSelectionDto(
                 bank.getId(),
                 bank.getName(),
                 category.getId(),
-                category.getName(),
+                categoryName,
                 selection.getCashbackPercent());
     }
 
@@ -95,8 +116,7 @@ public class SelectionService {
     }
 
     private void validatePercent(SelectionInput item) {
-        BigDecimal percent = item.percent();
-        if (percent == null || percent.signum() <= 0 || percent.compareTo(MAX_PERCENT) > 0) {
+        if (!CashbackPercent.isValid(item.percent())) {
             throw new ValidationException("Процент должен быть больше 0 и не больше 100");
         }
     }
@@ -109,5 +129,8 @@ public class SelectionService {
 
     private String currentYearMonth() {
         return YearMonth.now(MOSCOW_ZONE).toString();
+    }
+
+    private record BankCategoryKey(Long bankId, Long categoryId) {
     }
 }

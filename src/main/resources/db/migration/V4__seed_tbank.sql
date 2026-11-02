@@ -9,14 +9,17 @@ VALUES ('Т-Банк', 'tbank', 2)
 ON CONFLICT (slug) DO NOTHING;
 
 -- 2. Привязываем существующие категории к банку
-INSERT INTO bank_category (bank_id, category_id)
-SELECT b.id, c.id FROM (
+INSERT INTO bank_category (bank_id, category_id, local_name)
+SELECT b.id, c.id, v.local_name FROM (
     VALUES
-    ('auto_services'),('fuel'),('transport'),('vet_pets'),('home_repair'),
-    ('entertainment'),('digital_goods'),('cosmetics'),('beauty_spa'),('pharmacies'),
-    ('restaurants'),('supermarkets'),('fastfood'),('art'),('musical_instruments'),
-    ('education'),('books'),('air_tickets'),('railway_tickets'),('duty_free')
-) AS v(category_slug)
+    ('auto_services', 'Автоуслуги'), ('fuel', 'Заправки'), ('transport', 'Платные дороги'),
+    ('vet_pets', 'Животные'), ('home_repair', 'Ремонт и мебель'), ('entertainment', 'Кино и развлечения'),
+    ('digital_goods', 'Цифровые товары'), ('cosmetics', 'Косметика'), ('beauty_spa', 'Красота'),
+    ('pharmacies', 'Аптеки'), ('restaurants', 'Рестораны'), ('supermarkets', 'Супермаркеты'),
+    ('fastfood', 'Фастфуд'), ('art', 'Искусство'), ('musical_instruments', 'Музыка'),
+    ('education', 'Образование'), ('books', 'Книги и канцтовары'), ('air_tickets', 'Авиабилеты'),
+    ('railway_tickets', 'Ж/д билеты'), ('duty_free', 'Duty Free')
+) AS v(category_slug, local_name)
 JOIN bank b ON b.slug = 'tbank'
 JOIN category c ON c.slug = v.category_slug
 ON CONFLICT (bank_id, category_id) DO NOTHING;

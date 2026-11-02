@@ -14,13 +14,11 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     Optional<Category> findBySlug(String slug);
 
-    List<Category> findByNameContainingIgnoreCase(String name);
-
     @Query("""
             SELECT DISTINCT c FROM Category c
             LEFT JOIN c.aliases a
-            WHERE LOWER(c.name) LIKE LOWER(CONCAT('%', :text, '%'))
-               OR LOWER(a.alias) LIKE LOWER(CONCAT('%', :text, '%'))
+            WHERE LOWER(c.name) LIKE LOWER(CONCAT('%', :text, '%')) ESCAPE '!'
+               OR LOWER(a.alias) LIKE LOWER(CONCAT('%', :text, '%')) ESCAPE '!'
             """)
     List<Category> findByNameOrAliasContaining(@Param("text") String text);
 }

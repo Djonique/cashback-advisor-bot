@@ -11,16 +11,15 @@ import com.djonique.cashbackadvbot.service.UserStateService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 @Component
 @Slf4j
 public class CashbackTelegramBot extends TelegramLongPollingBot {
 
     private static final String UNKNOWN_TEXT = "Я вас не понял. Нажмите /start";
+    private static final String ERROR_TEXT = "Что-то пошло не так. Попробуйте ещё раз или нажмите /start";
 
     private final BotProperties botProperties;
     private final MenuHandler menuHandler;
@@ -28,6 +27,7 @@ public class CashbackTelegramBot extends TelegramLongPollingBot {
     private final CardHandler cardHandler;
     private final UserService userService;
     private final UserStateService userStateService;
+    private final TelegramMessageSender messageSender;
 
     public CashbackTelegramBot(
             BotProperties botProperties,
@@ -35,7 +35,8 @@ public class CashbackTelegramBot extends TelegramLongPollingBot {
             SetupDialogHandler setupDialogHandler,
             CardHandler cardHandler,
             UserService userService,
-            UserStateService userStateService) {
+            UserStateService userStateService,
+            TelegramMessageSender messageSender) {
         super(botProperties.getBotToken());
         this.botProperties = botProperties;
         this.menuHandler = menuHandler;
@@ -43,6 +44,7 @@ public class CashbackTelegramBot extends TelegramLongPollingBot {
         this.cardHandler = cardHandler;
         this.userService = userService;
         this.userStateService = userStateService;
+        this.messageSender = messageSender;
     }
 
     @Override
@@ -50,24 +52,27 @@ public class CashbackTelegramBot extends TelegramLongPollingBot {
         return botProperties.getBotUsername();
     }
 
-//    @Override
-//    public String getBotToken() {
-//        return botProperties.getBotToken();
-//    }
-
     @Override
     public void onUpdateReceived(Update update) {
-        if (update.hasMessage() && update.getMessage().hasText()) {
-            handleTextMessage(update.getMessage());
-        } else if (update.hasCallbackQuery()) {
-            menuHandler.handleCallback(update.getCallbackQuery(), this);
+        try {
+            if (update.hasMessage() && update.getMessage().hasText()) {
+                handleTextMessage(update.getMessage());
+            } else if (update.hasCallbackQuery()) {
+                menuHandler.handleCallback(update.getCallbackQuery(), this);
+            }
+        } catch (Exception e) {
+            log.error("Ошибка обработки update id={}", update.getUpdateId(), e);
+            Long chatId = extractChatId(update);
+            if (chatId != null) {
+                messageSender.send(chatId, ERROR_TEXT, null, this);
+            }
         }
     }
 
     private void handleTextMessage(Message message) {
-        String text = message.getText();
+        String text = message.getText().trim();
         if (text.startsWith("/")) {
-            if ("/start".equals(text)) {
+            if (text.equals("/start") || text.startsWith("/start@")) {
                 menuHandler.handleStart(message.getChatId(), username(message), this);
             }
             return;
@@ -76,12 +81,15 @@ public class CashbackTelegramBot extends TelegramLongPollingBot {
         AppUser user = userService.findOrCreate(message.getChatId(), username(message));
         DialogState state = userStateService.getState(user);
 
-        if (state == DialogState.CARD_INPUT_MCC || state == DialogState.CARD_INPUT_CATEGORY) {
+        if (state == DialogState.CARD_INPUT_MCC
+                || state == DialogState.CARD_INPUT_CATEGORY
+                || state == DialogState.CARD_INPUT_STORE
+                || state == DialogState.IDLE) {
             cardHandler.handleInput(user, text, state, this);
         } else if (state == DialogState.ENTERING_PERCENT) {
             setupDialogHandler.handlePercentInput(user, text, this);
         } else {
-            sendUnknownMessage(message.getChatId());
+            messageSender.send(message.getChatId(), UNKNOWN_TEXT, null, this);
         }
     }
 
@@ -89,14 +97,13 @@ public class CashbackTelegramBot extends TelegramLongPollingBot {
         return message.getFrom() != null ? message.getFrom().getUserName() : null;
     }
 
-    private void sendUnknownMessage(Long chatId) {
-        SendMessage message = new SendMessage();
-        message.setChatId(chatId);
-        message.setText(UNKNOWN_TEXT);
-        try {
-            execute(message);
-        } catch (TelegramApiException e) {
-            log.error("Не удалось отправить сообщение chatId={}", chatId, e);
+    private Long extractChatId(Update update) {
+        if (update.hasMessage()) {
+            return update.getMessage().getChatId();
         }
+        if (update.hasCallbackQuery() && update.getCallbackQuery().getMessage() != null) {
+            return update.getCallbackQuery().getMessage().getChatId();
+        }
+        return null;
     }
 }

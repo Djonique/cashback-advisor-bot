@@ -9,16 +9,20 @@ VALUES ('Сбербанк', 'sber', 4)
 ON CONFLICT (slug) DO NOTHING;
 
 -- 2. Привязываем существующие категории к банку
-INSERT INTO bank_category (bank_id, category_id)
-SELECT b.id, c.id FROM (
+INSERT INTO bank_category (bank_id, category_id, local_name)
+SELECT b.id, c.id, v.local_name FROM (
     VALUES
-    ('supermarkets'),('fuel'),('auto_services'),('fines'),('restaurants'),
-    ('fastfood'),('clothes_shoes'),('home_repair'),('kids_goods'),('vet_pets'),
-    ('carsharing'),('taxi'),('entertainment'),('cosmetics'),('jewelry'),
-    ('digital_goods'),('flowers'),('books'),('education'),('art'), -- Хобби и развлечения частично сюда
-    ('beauty_spa'),('transport'),('electronics'),('medical_clinics'),('fitness'),
-    ('sport_goods'),('pharmacies'),('hotels') -- Отели на СпасибоТревел
-) AS v(category_slug)
+    ('supermarkets', 'Супермаркеты'), ('fuel', 'АЗС'), ('auto_services', 'Автоуслуги'),
+    ('fines', 'Штрафы ГИБДД'), ('restaurants', 'Кафе и рестораны'), ('fastfood', 'Фастфуд'),
+    ('clothes_shoes', 'Одежда и обувь'), ('home_repair', 'Товары для дома'), ('kids_goods', 'Товары для детей'),
+    ('vet_pets', 'Питомцы'), ('carsharing', 'Аренда авто'), ('taxi', 'Такси'),
+    ('entertainment', 'Кино и театр'), ('cosmetics', 'Парфюмерия и косметика'), ('jewelry', 'Ювелирные изделия'),
+    ('digital_goods', 'Цифровые товары'), ('flowers', 'Цветы'), ('books', 'Книги'),
+    ('education', 'Образование'), ('art', 'Хобби и развлечения'), ('beauty_spa', 'Салоны красоты'),
+    ('transport', 'Транспорт'), ('electronics', 'Электроника и бытовая техника'), ('medical_clinics', 'Медицинские услуги'),
+    ('fitness', 'Спорт и фитнес'), ('sport_goods', 'Спортивные товары'), ('pharmacies', 'Аптеки'),
+    ('hotels', 'Отели на СпасибоТревел')
+) AS v(category_slug, local_name)
 JOIN bank b ON b.slug = 'sber'
 JOIN category c ON c.slug = v.category_slug
 ON CONFLICT (bank_id, category_id) DO NOTHING;

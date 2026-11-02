@@ -47,7 +47,9 @@ INSERT INTO category (name, slug) VALUES
 ('Налоги',                      'taxes'),
 ('Duty Free',                   'duty_free'),
 ('Транспортные карты',          'transport_cards'),
-('Бытовые услуги',              'household_services')
+('Бытовые услуги',              'household_services'),
+('Экосистема Яндекса',          'yandex_ecosystem'),
+('Экосистема Сбера',            'sber_ecosystem')
 ON CONFLICT (slug) DO NOTHING;
 
 -- 2. Загружаем алиасы

@@ -9,17 +9,21 @@ VALUES ('ВБ Банк', 'wb', 7)
 ON CONFLICT (slug) DO NOTHING;
 
 -- 2. Привязываем существующие категории к банку
-INSERT INTO bank_category (bank_id, category_id)
-SELECT b.id, c.id FROM (
+INSERT INTO bank_category (bank_id, category_id, local_name)
+SELECT b.id, c.id, v.local_name FROM (
     VALUES
-    ('auto_services'),('fuel'),('transport'),('home_repair'),('household_services'),
-    ('vet_pets'),('supermarkets'),('restaurants'),('fastfood'),('entertainment'),
-    ('art'),('digital_goods'),('books'),('education'),('sport_goods'),
-    ('fitness'),('pharmacies'),('beauty_spa'),('medical_clinics'),('air_tickets'),
-    ('railway_tickets'),('hotels'),('duty_free'),('taxi'),('carsharing'),
-    ('clothes_shoes'),('kids_goods'),('electronics'),('jewelry'),('flowers'),
-    ('marketplaces')
-) AS v(category_slug)
+    ('auto_services', 'Автоуслуги и автозапчасти'), ('fuel', 'Заправки'), ('transport', 'Платные дороги'),
+    ('home_repair', 'Дом и ремонт'), ('household_services', 'Бытовые услуги'), ('vet_pets', 'Питомцы'),
+    ('supermarkets', 'Продукты'), ('restaurants', 'Кафе и рестораны'), ('fastfood', 'Фастфуд'),
+    ('entertainment', 'Впечатления'), ('art', 'Хобби и творчество'), ('digital_goods', 'Цифровые подписки'),
+    ('books', 'Книги и канцтовары'), ('education', 'Образование'), ('sport_goods', 'Спортивные товары'),
+    ('fitness', 'Фитнес'), ('pharmacies', 'Аптеки'), ('beauty_spa', 'Красота'),
+    ('medical_clinics', 'Медицинские услуги'), ('air_tickets', 'Авиабилеты'), ('railway_tickets', 'Ж/д билеты'),
+    ('hotels', 'Отели и турагентства'), ('duty_free', 'Duty free'), ('taxi', 'Такси'),
+    ('carsharing', 'Аренда авто'), ('clothes_shoes', 'Одежда и обувь'), ('kids_goods', 'Детские товары'),
+    ('electronics', 'Электроника и техника'), ('jewelry', 'Ювелирные украшения'), ('flowers', 'Цветы'),
+    ('marketplaces', 'Маркетплейсы')
+) AS v(category_slug, local_name)
 JOIN bank b ON b.slug = 'wb'
 JOIN category c ON c.slug = v.category_slug
 ON CONFLICT (bank_id, category_id) DO NOTHING;

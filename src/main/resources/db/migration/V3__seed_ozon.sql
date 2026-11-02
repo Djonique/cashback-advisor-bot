@@ -9,17 +9,21 @@ VALUES ('Ozon Банк', 'ozon', 1)
 ON CONFLICT (slug) DO NOTHING;
 
 -- 2. Привязываем существующие категории к банку
-INSERT INTO bank_category (bank_id, category_id)
-SELECT b.id, c.id FROM (
+INSERT INTO bank_category (bank_id, category_id, local_name)
+SELECT b.id, c.id, v.local_name FROM (
     VALUES
-    ('education'),('air_tickets'),('railway_tickets'),('hotels'),('transport'),
-    ('taxi'),('carsharing'),('auto_services'),('fuel'),('pharmacies'),
-    ('beauty_spa'),('cosmetics'),('home_repair'),('art'),('entertainment'),
-    ('museums'),('fitness'),('medical_clinics'),('musical_instruments'),('supermarkets'),
-    ('electronics'),('restaurants'),('fastfood'),('dry_cleaning'),('photo_video'),
-    ('flowers'),('sport_goods'),('clothes_shoes'),('books'),('kids_goods'),
-    ('jewelry'),('vet_pets')
-) AS v(category_slug)
+    ('education', 'Образование'), ('air_tickets', 'Авиабилеты'), ('railway_tickets', 'ЖД билеты'),
+    ('hotels', 'Отели'), ('transport', 'Транспорт'), ('taxi', 'Такси'),
+    ('carsharing', 'Каршеринг'), ('auto_services', 'Автоуслуги'), ('fuel', 'Топливо и АЗС'),
+    ('pharmacies', 'Аптеки'), ('beauty_spa', 'Салоны красоты и SPA'), ('cosmetics', 'Косметика'),
+    ('home_repair', 'Дом, ремонт'), ('art', 'Искусство'), ('entertainment', 'Развлечения'),
+    ('museums', 'Выставки и музеи'), ('fitness', 'Фитнес'), ('medical_clinics', 'Медицинские клиники'),
+    ('musical_instruments', 'Музыкальные инструменты'), ('supermarkets', 'Супермаркеты'),
+    ('electronics', 'Электроника и бытовая техника'), ('restaurants', 'Рестораны'), ('fastfood', 'Фастфуд'),
+    ('dry_cleaning', 'Химчистки'), ('photo_video', 'Фото/Видео'), ('flowers', 'Цветы'),
+    ('sport_goods', 'Спорттовары'), ('clothes_shoes', 'Одежда, обувь'), ('books', 'Книги'),
+    ('kids_goods', 'Товары для детей'), ('jewelry', 'Ювелирные изделия'), ('vet_pets', 'Вет клиники и зоомагазины')
+) AS v(category_slug, local_name)
 JOIN bank b ON b.slug = 'ozon'
 JOIN category c ON c.slug = v.category_slug
 ON CONFLICT (bank_id, category_id) DO NOTHING;

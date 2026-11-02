@@ -27,6 +27,7 @@ CREATE TABLE bank_category (
     id          BIGSERIAL PRIMARY KEY,
     bank_id     BIGINT    NOT NULL,
     category_id BIGINT    NOT NULL,
+    local_name  VARCHAR(100),
     CONSTRAINT fk_bank_category_bank FOREIGN KEY (bank_id) REFERENCES bank(id) ON DELETE CASCADE,
     CONSTRAINT fk_bank_category_category FOREIGN KEY (category_id) REFERENCES category(id) ON DELETE RESTRICT,
     CONSTRAINT ux_bank_category_pair UNIQUE (bank_id, category_id)
@@ -55,6 +56,9 @@ CREATE TABLE bank_excluded_mcc (
     CONSTRAINT chk_bem_mcc_format CHECK (mcc_code ~ '^[0-9]{4}$')
 );
 COMMENT ON TABLE bank_excluded_mcc IS 'MCC-коды, по которым банк не начисляет кэшбэк (из PDF)';
+
+CREATE INDEX idx_bank_excluded_mcc_code ON bank_excluded_mcc (mcc_code);
+COMMENT ON INDEX idx_bank_excluded_mcc_code IS 'Поиск банков, исключивших MCC';
 
 CREATE TABLE category_alias (
     id          BIGSERIAL PRIMARY KEY,
@@ -103,9 +107,11 @@ CREATE TABLE user_state (
     user_id    BIGINT      PRIMARY KEY,
     state      VARCHAR(50) NOT NULL,
     context    JSONB       NULL,
+    version    BIGINT      NOT NULL DEFAULT 0,
     updated_at TIMESTAMP   NOT NULL DEFAULT now(),
     CONSTRAINT fk_user_state_user FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 );
 COMMENT ON TABLE  user_state         IS 'Текущее состояние диалога (FSM) для каждого пользователя';
 COMMENT ON COLUMN user_state.state   IS 'IDLE | CHOOSING_BANK | CHOOSING_CATEGORIES | ENTERING_PERCENT | REVIEW | CARD_INPUT_MCC | CARD_INPUT_CATEGORY';
 COMMENT ON COLUMN user_state.context IS 'Временные данные диалога (bankId, selectedCategoryIds, percents), JSON';
+COMMENT ON COLUMN user_state.version IS 'Версия строки для оптимистической блокировки (@Version)';

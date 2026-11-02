@@ -33,6 +33,10 @@ public class UserState {
     @Column(name = "context", columnDefinition = "jsonb")
     private String context;
 
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
+
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt = LocalDateTime.now(ZoneId.of("Europe/Moscow"));
 

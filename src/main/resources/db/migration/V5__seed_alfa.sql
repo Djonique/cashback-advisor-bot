@@ -9,17 +9,21 @@ VALUES ('Альфа-Банк', 'alfa', 3)
 ON CONFLICT (slug) DO NOTHING;
 
 -- 2. Привязываем существующие категории к банку
-INSERT INTO bank_category (bank_id, category_id)
-SELECT b.id, c.id FROM (
+INSERT INTO bank_category (bank_id, category_id, local_name)
+SELECT b.id, c.id, v.local_name FROM (
     VALUES
-    ('auto_services'),('fuel'),('fitness'),('entertainment'),('alcohol'),
-    ('pharmacies'),('carsharing'),('kids_goods'),('home_repair'),('vet_pets'),
-    ('medical_clinics'),('restaurants'),('books'),('beauty_spa'),('marketplaces'),
-    ('taxes'),('fines'),('education'),('clothes_shoes'),('supermarkets'),
-    ('telecom'),('sport_goods'),('taxi'),('electronics'),('transport'),
-    ('transport_cards'),('fastfood'),('flowers'),('digital_goods'),('jewelry'),
-    ('air_tickets'),('hotels'),('railway_tickets')
-) AS v(category_slug)
+    ('auto_services', 'Авто'), ('fuel', 'АЗС'), ('fitness', 'Активный отдых'),
+    ('entertainment', 'Развлечения'), ('alcohol', 'Алкоголь'), ('pharmacies', 'Аптеки'),
+    ('carsharing', 'Аренда авто'), ('kids_goods', 'Детские товары'), ('home_repair', 'Дом и ремонт'),
+    ('vet_pets', 'Животные'), ('medical_clinics', 'Здоровье'), ('restaurants', 'Кафе и рестораны'),
+    ('books', 'Книги'), ('beauty_spa', 'Красота'), ('marketplaces', 'Маркетплейсы'),
+    ('taxes', 'Налоги'), ('fines', 'Штрафы ГАИ'), ('education', 'Образование'),
+    ('clothes_shoes', 'Одежда и обувь'), ('supermarkets', 'Продукты'), ('telecom', 'Связь, интернет и ТВ'),
+    ('sport_goods', 'Спортивные товары'), ('taxi', 'Такси'), ('electronics', 'Техника'),
+    ('transport', 'Транспорт'), ('transport_cards', 'Транспортные карты'), ('fastfood', 'Фастфуд'),
+    ('flowers', 'Цветы'), ('digital_goods', 'Цифровые товары'), ('jewelry', 'Ювелирные изделия'),
+    ('air_tickets', 'Авиа в Тревел'), ('hotels', 'Отели в Тревел'), ('railway_tickets', 'Ж/Д в Тревел')
+) AS v(category_slug, local_name)
 JOIN bank b ON b.slug = 'alfa'
 JOIN category c ON c.slug = v.category_slug
 ON CONFLICT (bank_id, category_id) DO NOTHING;

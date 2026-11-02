@@ -9,15 +9,18 @@ VALUES ('Яндекс Банк', 'yandex', 5)
 ON CONFLICT (slug) DO NOTHING;
 
 -- 2. Привязываем существующие категории к банку
-INSERT INTO bank_category (bank_id, category_id)
-SELECT b.id, c.id FROM (
+INSERT INTO bank_category (bank_id, category_id, local_name)
+SELECT b.id, c.id, v.local_name FROM (
     VALUES
-    ('restaurants'),('fastfood'),('education'),('clothes_shoes'),('entertainment'),
-    ('transport'),('flowers'),('pharmacies'),('home_repair'),('beauty_spa'),
-    ('cosmetics'),('fitness'),('sport_goods'),('medical_clinics'),('supermarkets'),
-    ('auto_services'),('vet_pets'),('books'),('electronics'),('jewelry'),
-    ('kids_goods'),('fuel')
-) AS v(category_slug)
+    ('restaurants', 'Кафе, рестораны и бары'), ('fastfood', 'Фастфуд'), ('education', 'Образование'),
+    ('clothes_shoes', 'Одежда и обувь'), ('entertainment', 'Развлечения и Кино'), ('transport', 'Городской транспорт'),
+    ('flowers', 'Цветы'), ('pharmacies', 'Аптеки'), ('home_repair', 'Товары для дома'),
+    ('beauty_spa', 'Красота'), ('cosmetics', 'Парфюмерия и косметика'), ('fitness', 'Спорт и фитнес'),
+    ('sport_goods', 'Спорт и фитнес'), ('medical_clinics', 'Медицина'), ('supermarkets', 'Супермаркеты'),
+    ('auto_services', 'Автоуслуги'), ('vet_pets', 'Питомцы'), ('books', 'Книги'),
+    ('electronics', 'Электроника и бытовая техника'), ('jewelry', 'Ювелирные изделия'),
+    ('kids_goods', 'Товары для детей'), ('fuel', 'АЗС')
+) AS v(category_slug, local_name)
 JOIN bank b ON b.slug = 'yandex'
 JOIN category c ON c.slug = v.category_slug
 ON CONFLICT (bank_id, category_id) DO NOTHING;

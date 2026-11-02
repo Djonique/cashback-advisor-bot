@@ -1,4 +1,9 @@
 HELP.md
+AGENTS.md
+ARCHITECTURE.md
+CONVENTIONS.md
+DOMAIN.md
+TASKS.md
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
