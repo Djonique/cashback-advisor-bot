@@ -5,7 +5,7 @@
 
 -- 1. Добавляем банк
 INSERT INTO bank (name, slug, display_order)
-VALUES ('ВБ Банк', 'wb', 7)
+VALUES ('WB Банк', 'wb', 7)
 ON CONFLICT (slug) DO NOTHING;
 
 -- 2. Привязываем существующие категории к банку

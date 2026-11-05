@@ -12,8 +12,12 @@ import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.AnswerPreCheckoutQuery;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.payments.PreCheckoutQuery;
+import org.telegram.telegrambots.meta.api.objects.payments.SuccessfulPayment;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -26,6 +30,7 @@ public class CashbackTelegramBot extends TelegramLongPollingBot {
     private static final String UNKNOWN_TEXT = "Я вас не понял. Нажмите /start";
     private static final String UNKNOWN_COMMAND_TEXT = "Неизвестная команда. Нажмите /start";
     private static final String ERROR_TEXT = "Что-то пошло не так. Попробуйте ещё раз или нажмите /start";
+    private static final String PAYMENT_THANKS_TEXT = "Огромное спасибо за поддержку! ❤️";
 
     private final BotProperties botProperties;
     private final MenuHandler menuHandler;
@@ -71,6 +76,10 @@ public class CashbackTelegramBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
+        if (update.hasPreCheckoutQuery()) {
+            workerPool.submit(() -> handlePreCheckoutQuery(update.getPreCheckoutQuery()));
+            return;
+        }
         Long chatId = extractChatId(update);
         if (chatId == null) {
             workerPool.submit(() -> process(update));
@@ -82,7 +91,9 @@ public class CashbackTelegramBot extends TelegramLongPollingBot {
 
     private void process(Update update) {
         try {
-            if (update.hasMessage() && update.getMessage().hasText()) {
+            if (update.hasMessage() && update.getMessage().hasSuccessfulPayment()) {
+                handleSuccessfulPayment(update.getMessage());
+            } else if (update.hasMessage() && update.getMessage().hasText()) {
                 handleTextMessage(update.getMessage());
             } else if (update.hasCallbackQuery()) {
                 menuHandler.handleCallback(update.getCallbackQuery());
@@ -94,6 +105,24 @@ public class CashbackTelegramBot extends TelegramLongPollingBot {
                 messageSender.send(chatId, ERROR_TEXT, null);
             }
         }
+    }
+
+    private void handlePreCheckoutQuery(PreCheckoutQuery preCheckoutQuery) {
+        AnswerPreCheckoutQuery answer = new AnswerPreCheckoutQuery(preCheckoutQuery.getId(), true);
+        try {
+            execute(answer);
+            log.info("PreCheckoutQuery подтверждён: id={}", preCheckoutQuery.getId());
+        } catch (TelegramApiException e) {
+            log.error("Не удалось подтвердить PreCheckoutQuery: id={}",
+                    preCheckoutQuery.getId(), e);
+        }
+    }
+
+    private void handleSuccessfulPayment(Message message) {
+        SuccessfulPayment payment = message.getSuccessfulPayment();
+        log.info("Успешный платёж: chatId={}, totalAmount={}, currency={}",
+                message.getChatId(), payment.getTotalAmount(), payment.getCurrency());
+        messageSender.send(message.getChatId(), PAYMENT_THANKS_TEXT, null);
     }
 
     private void handleTextMessage(Message message) {

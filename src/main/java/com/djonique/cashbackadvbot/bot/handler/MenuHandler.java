@@ -4,12 +4,15 @@ import com.djonique.cashbackadvbot.bot.BotSender;
 import com.djonique.cashbackadvbot.bot.CallbackData;
 import com.djonique.cashbackadvbot.bot.keyboard.KeyboardFactory;
 import com.djonique.cashbackadvbot.domain.AppUser;
+import com.djonique.cashbackadvbot.service.PaymentService;
 import com.djonique.cashbackadvbot.service.UserService;
 import com.djonique.cashbackadvbot.service.UserStateService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
+import org.telegram.telegrambots.meta.bots.AbsSender;
 
 @Component
 @RequiredArgsConstructor
@@ -22,6 +25,12 @@ public class MenuHandler {
     private static final String MENU_TEXT = "Отправьте сообщение с названием магазина, категорию кешбэка или МСС-код";
     private static final String IN_DEVELOPMENT = "В разработке...";
     private static final String EDIT_ERROR_TEXT = "Не удалось обновить меню";
+    private static final String CHAT_ERROR_TEXT = "Не удалось определить чат";
+    private static final String DONATION_MENU_TEXT = "Ваша поддержка очень важна. Выберите формат:";
+    private static final String DONATION_STARS_TITLE = "Донат звездами Telegram";
+    private static final int DONATION_STARS_AMOUNT = 100;
+    private static final String YOOKASSA_SOON_TEXT =
+            "Оплата через ЮKassa появится позже. Спасибо, что хотите поддержать!";
 
     private final UserService userService;
     private final UserStateService userStateService;
@@ -32,6 +41,8 @@ public class MenuHandler {
     private final SupportHandler supportHandler;
     private final CardSearchHandler cardSearchHandler;
     private final SetupHandler setupHandler;
+    private final PaymentService paymentService;
+    private final ObjectProvider<AbsSender> absSenderProvider;
 
     public void handleStart(Long chatId, String username) {
         AppUser user = userService.findOrCreate(chatId, username);
@@ -53,7 +64,7 @@ public class MenuHandler {
             case "menu" -> handleMenu(chatId, username);
             case "settings" -> handleSettings(chatId, username);
             case "help" -> helpHandler.sendHelp(chatId);
-            case "support" -> supportHandler.sendMenu(chatId);
+            case "support" -> sendDonationMenu(chatId);
             case "source_code" -> supportHandler.sendSourceCode(chatId);
             default -> log.warn("Неизвестная команда: {}", command);
         }
@@ -76,10 +87,12 @@ public class MenuHandler {
             case CallbackData.CARD_BY_STORE -> cardSearchHandler.handleCardByStore(callbackQuery);
             case CallbackData.MENU_SETUP -> setupHandler.handleSetup(callbackQuery);
             case CallbackData.SETUP_DONE -> setupHandler.handleDone(callbackQuery);
-            case CallbackData.MENU_SUPPORT -> supportHandler.handleMenu(callbackQuery);
+            case CallbackData.MENU_SUPPORT, CallbackData.MENU_DONATE -> showDonationMenu(callbackQuery);
+            case CallbackData.DONATE_STARS -> handleStarsDonation(callbackQuery);
+            case CallbackData.DONATE_YOOKASSA_100, CallbackData.DONATE_YOOKASSA_300,
+                 CallbackData.DONATE_YOOKASSA_500, CallbackData.DONATE_YOOKASSA_CUSTOM ->
+                    handleYookassaDonation(callbackQuery);
             case CallbackData.MENU_HELP -> helpHandler.handleMenu(callbackQuery);
-            case CallbackData.SUPPORT_100, CallbackData.SUPPORT_250, CallbackData.SUPPORT_500 ->
-                    supportHandler.handlePayment(callbackQuery, data);
             case CallbackData.HELP_GENERAL, CallbackData.HELP_SETUP, CallbackData.HELP_STORE,
                  CallbackData.HELP_CATEGORY, CallbackData.HELP_MCC ->
                     helpHandler.handleHelp(callbackQuery, data);
@@ -100,6 +113,34 @@ public class MenuHandler {
     private void handleSettings(Long chatId, String username) {
         AppUser user = userService.findOrCreate(chatId, username);
         setupHandler.openBankSelection(user, chatId);
+    }
+
+    private void sendDonationMenu(Long chatId) {
+        botSender.send(chatId, DONATION_MENU_TEXT, keyboardFactory.getDonationMenuKeyboard());
+    }
+
+    private void showDonationMenu(CallbackQuery callbackQuery) {
+        if (!callbackSupport.editText(callbackQuery, DONATION_MENU_TEXT,
+                keyboardFactory.getDonationMenuKeyboard())) {
+            botSender.answerCallback(callbackQuery.getId(), EDIT_ERROR_TEXT);
+            return;
+        }
+        botSender.answerCallback(callbackQuery.getId(), null);
+    }
+
+    private void handleStarsDonation(CallbackQuery callbackQuery) {
+        Long chatId = callbackSupport.getChatId(callbackQuery);
+        if (chatId == null) {
+            botSender.answerCallback(callbackQuery.getId(), CHAT_ERROR_TEXT);
+            return;
+        }
+        paymentService.sendStarsInvoice(chatId, DONATION_STARS_TITLE, DONATION_STARS_AMOUNT,
+                absSenderProvider.getObject());
+        botSender.answerCallback(callbackQuery.getId(), null);
+    }
+
+    private void handleYookassaDonation(CallbackQuery callbackQuery) {
+        botSender.answerCallback(callbackQuery.getId(), YOOKASSA_SOON_TEXT);
     }
 
     private void editToMainMenu(CallbackQuery callbackQuery) {

@@ -25,6 +25,9 @@ public class AppUser {
     @Column(name = "username", length = 255)
     private String username;
 
+    @Column(name = "timezone", nullable = false, length = 50)
+    private String timezone = "Europe/Moscow";
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now(ZoneId.of("Europe/Moscow"));
 }

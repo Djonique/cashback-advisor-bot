@@ -6,7 +6,14 @@ public final class CallbackData {
     public static final String MENU_CHOOSE = "menu:choose";
     public static final String MENU_SETUP = "menu:setup";
     public static final String MENU_SUPPORT = "menu:support";
+    public static final String MENU_DONATE = "menu:donate";
     public static final String MENU_HELP = "menu:help";
+
+    public static final String DONATE_STARS = "donate:stars";
+    public static final String DONATE_YOOKASSA_100 = "donate:yookassa_100";
+    public static final String DONATE_YOOKASSA_300 = "donate:yookassa_300";
+    public static final String DONATE_YOOKASSA_500 = "donate:yookassa_500";
+    public static final String DONATE_YOOKASSA_CUSTOM = "donate:yookassa_custom";
 
     public static final String SUPPORT_100 = "support:100";
     public static final String SUPPORT_250 = "support:250";

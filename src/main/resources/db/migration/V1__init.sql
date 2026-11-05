@@ -83,11 +83,13 @@ CREATE TABLE app_user (
     id               BIGSERIAL   PRIMARY KEY,
     telegram_chat_id BIGINT      NOT NULL,
     username         VARCHAR(255) NULL,
+    timezone         VARCHAR(50) NOT NULL DEFAULT 'Europe/Moscow',
     created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT ux_app_user_chat_id UNIQUE (telegram_chat_id)
 );
 COMMENT ON TABLE  app_user                  IS 'Пользователи Telegram-бота';
 COMMENT ON COLUMN app_user.telegram_chat_id IS 'ID чата в Telegram — первичный идентификатор пользователя';
+COMMENT ON COLUMN app_user.timezone         IS 'IANA-зона пользователя для ежемесячных напоминаний';
 
 CREATE TABLE user_bank_selection (
     id               BIGSERIAL    PRIMARY KEY,
@@ -105,7 +107,7 @@ CREATE TABLE user_bank_selection (
     CONSTRAINT chk_ubs_year_month_format CHECK (year_month ~ '^[0-9]{4}-(0[1-9]|1[0-2])$')
 );
 COMMENT ON TABLE  user_bank_selection                  IS 'Выбор категорий и процентов пользователем на календарный месяц';
-COMMENT ON COLUMN user_bank_selection.year_month       IS 'Месяц в формате YYYY-MM; всегда Europe/Moscow';
+COMMENT ON COLUMN user_bank_selection.year_month       IS 'Месяц в формате YYYY-MM в часовом поясе пользователя';
 COMMENT ON COLUMN user_bank_selection.cashback_percent IS 'Процент, который ввёл пользователь; 0 < x <= 100';
 
 CREATE INDEX idx_ubs_user_month ON user_bank_selection (user_id, year_month);

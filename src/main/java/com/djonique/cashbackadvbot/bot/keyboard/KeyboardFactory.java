@@ -34,7 +34,7 @@ public class KeyboardFactory {
                 .keyboardRow(List.of(button("🍔 " + BotButtons.SUPPORT_BURGER, CallbackData.SUPPORT_100)))
                 .keyboardRow(List.of(button("🖥 " + BotButtons.SUPPORT_SERVER, CallbackData.SUPPORT_250)))
                 .keyboardRow(List.of(button("🚀 " + BotButtons.SUPPORT_DEPOSIT, CallbackData.SUPPORT_500)))
-                .keyboardRow(List.of(button("🔙 " + BotButtons.BACK, CallbackData.MENU_MAIN)))
+                .keyboardRow(List.of(button("🔙 " + BotButtons.BACK_TO_MENU, CallbackData.MENU_MAIN)))
                 .build();
     }
 
@@ -53,7 +53,7 @@ public class KeyboardFactory {
         InlineKeyboardMarkup.InlineKeyboardMarkupBuilder builder = InlineKeyboardMarkup.builder();
         banks.forEach(bank -> builder.keyboardRow(
                 List.of(button(bank.getName(), CallbackData.SETUP_BANK_PREFIX + bank.getId()))));
-        builder.keyboardRow(List.of(button("🔙 " + BotButtons.BACK, CallbackData.MENU_MAIN)));
+        builder.keyboardRow(List.of(button("🔙 " + BotButtons.BACK_TO_MENU, CallbackData.MENU_MAIN)));
         return builder.build();
     }
 
@@ -71,6 +71,27 @@ public class KeyboardFactory {
         return builder.build();
     }
 
+    public InlineKeyboardMarkup getDonationMenuKeyboard() {
+        return InlineKeyboardMarkup.builder()
+                .keyboardRow(List.of(button("⭐ " + BotButtons.DONATE_STARS, CallbackData.DONATE_STARS)))
+                .keyboardRow(List.of(button("🖥 " + BotButtons.DONATE_SERVER,
+                        CallbackData.DONATE_YOOKASSA_100)))
+                .keyboardRow(List.of(button("💵 " + BotButtons.DONATE_DEPOT,
+                        CallbackData.DONATE_YOOKASSA_300)))
+                .keyboardRow(List.of(button("😻 " + BotButtons.DONATE_CATS,
+                        CallbackData.DONATE_YOOKASSA_500)))
+                .keyboardRow(List.of(button("💰 " + BotButtons.DONATE_CUSTOM,
+                        CallbackData.DONATE_YOOKASSA_CUSTOM)))
+                .keyboardRow(List.of(button("🔙 " + BotButtons.BACK_TO_MENU, CallbackData.MENU_MAIN)))
+                .build();
+    }
+
+    public InlineKeyboardMarkup getMonthlyNotificationKeyboard() {
+        return InlineKeyboardMarkup.builder()
+                .keyboardRow(List.of(button("⚙️ " + BotButtons.SETUP, CallbackData.MENU_SETUP)))
+                .build();
+    }
+
     public InlineKeyboardMarkup getBackToCardMenuKeyboard() {
         return InlineKeyboardMarkup.builder()
                 .keyboardRow(List.of(button("🔙 " + BotButtons.BACK, CallbackData.CARD_MENU)))
@@ -79,10 +100,10 @@ public class KeyboardFactory {
 
     public InlineKeyboardMarkup getCardSearchMenuKeyboard() {
         return InlineKeyboardMarkup.builder()
-                .keyboardRow(List.of(button("🔤 " + BotButtons.CARD_BY_CATEGORY, CallbackData.CARD_BY_CATEGORY)))
-                .keyboardRow(List.of(button("🔢 " + BotButtons.CARD_BY_MCC, CallbackData.CARD_BY_MCC)))
                 .keyboardRow(List.of(button("🏪 " + BotButtons.CARD_BY_STORE, CallbackData.CARD_BY_STORE)))
-                .keyboardRow(List.of(button("🔙 " + BotButtons.BACK, CallbackData.MENU_MAIN)))
+                .keyboardRow(List.of(button("🗂 " + BotButtons.CARD_BY_CATEGORY, CallbackData.CARD_BY_CATEGORY)))
+                .keyboardRow(List.of(button("🔢 " + BotButtons.CARD_BY_MCC, CallbackData.CARD_BY_MCC)))
+                .keyboardRow(List.of(button("🔙 " + BotButtons.BACK_TO_MENU, CallbackData.MENU_MAIN)))
                 .build();
     }
 

@@ -26,4 +26,8 @@ public interface UserBankSelectionRepository extends JpaRepository<UserBankSelec
     void deleteSelection(@Param("userId") Long userId,
                          @Param("bankId") Long bankId,
                          @Param("yearMonth") String yearMonth);
+
+    @Modifying
+    @Query("DELETE FROM UserBankSelection u WHERE u.yearMonth < :currentMonth")
+    void deleteOldSelections(@Param("currentMonth") String currentMonth);
 }
