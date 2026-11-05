@@ -321,7 +321,7 @@ JOIN category c ON c.id = bc.category_id AND c.slug = 'vet_pets'
 CROSS JOIN (VALUES ('0742'),('5995')) AS v(mcc)
 ON CONFLICT DO NOTHING;
 
--- 4. Исключения (МСС, по которым нельзя получить кэшбэк)
+-- 4. Исключения (МСС, по которым нельзя получить кешбэк)
 INSERT INTO bank_excluded_mcc (bank_id, mcc_code)
 SELECT b.id, v.mcc FROM bank b
 CROSS JOIN (VALUES

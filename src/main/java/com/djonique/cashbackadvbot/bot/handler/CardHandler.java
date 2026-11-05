@@ -1,6 +1,6 @@
 package com.djonique.cashbackadvbot.bot.handler;
 
-import com.djonique.cashbackadvbot.bot.TelegramMessageSender;
+import com.djonique.cashbackadvbot.bot.BotSender;
 import com.djonique.cashbackadvbot.bot.keyboard.KeyboardFactory;
 import com.djonique.cashbackadvbot.bot.state.DialogState;
 import com.djonique.cashbackadvbot.domain.AppUser;
@@ -11,7 +11,6 @@ import com.djonique.cashbackadvbot.service.UserStateService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.telegram.telegrambots.meta.bots.AbsSender;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -24,18 +23,19 @@ public class CardHandler {
     private static final String INVALID_MCC_TEXT =
             "Ошибка: MCC-код должен состоять из 4 цифр. Попробуйте еще раз.";
     private static final String NOT_FOUND_TEXT =
-            "По вашему запросу ничего не найдено. Возможно, вы не настроили кешбэк на этот месяц.";
+            "Я не нашел карт с настроенным кешбэком, подходящих под Ваш запрос.";
     private static final String[] MEDALS = {"🥇", "🥈", "🥉"};
 
     private final CashbackAdvisorService cashbackAdvisorService;
     private final UserStateService userStateService;
     private final KeyboardFactory keyboardFactory;
-    private final TelegramMessageSender messageSender;
+    private final BotSender botSender;
 
-    public void handleInput(AppUser user, String input, DialogState state, AbsSender sender) {
+    public void handleInput(AppUser user, String input, DialogState state) {
         String trimmedInput = input == null ? "" : input.trim();
         if (state == DialogState.CARD_INPUT_MCC && !MccCode.isValid(trimmedInput)) {
-            messageSender.send(user.getTelegramChatId(), INVALID_MCC_TEXT, null, sender);
+            botSender.send(user.getTelegramChatId(), INVALID_MCC_TEXT,
+                    keyboardFactory.getBackToMainKeyboard());
             return;
         }
 
@@ -46,16 +46,20 @@ public class CardHandler {
         }
 
         if (recommendations.isEmpty()) {
-            log.info("Ничего не найдено: userId={}, input='{}'", user.getId(), trimmedInput);
-            messageSender.send(user.getTelegramChatId(), NOT_FOUND_TEXT,
-                    keyboardFactory.getMainMenuKeyboard(), sender);
+            log.info("Ничего не найдено: userId={}, inputLength={}",
+                    user.getId(), trimmedInput.length());
+            botSender.send(user.getTelegramChatId(), NOT_FOUND_TEXT,
+                    keyboardFactory.getMainMenuKeyboard());
             return;
         }
 
-        log.info("Найдено рекомендаций: {} для userId={}, input='{}'",
-                recommendations.size(), user.getId(), trimmedInput);
-        messageSender.send(user.getTelegramChatId(), buildRecommendationsText(trimmedInput, recommendations),
-                keyboardFactory.getMainMenuKeyboard(), sender);
+        log.info("Найдено рекомендаций: {} для userId={}",
+                recommendations.size(), user.getId());
+        if (!botSender.send(user.getTelegramChatId(),
+                buildRecommendationsText(trimmedInput, recommendations),
+                keyboardFactory.getMainMenuKeyboard())) {
+            log.warn("Не удалось отправить рекомендации chatId={}", user.getTelegramChatId());
+        }
     }
 
     private String buildRecommendationsText(String input, List<RecommendationDto> recommendations) {

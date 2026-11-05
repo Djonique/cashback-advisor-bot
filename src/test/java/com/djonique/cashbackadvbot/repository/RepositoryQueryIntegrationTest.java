@@ -8,11 +8,13 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Tag("integration")
+@ActiveProfiles("local")
 @SpringBootTest(properties = {
         "telegrambots.enabled=false",
         "app.telegram.registration-enabled=false",

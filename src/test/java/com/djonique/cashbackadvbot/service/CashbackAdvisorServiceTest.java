@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -119,16 +120,16 @@ class CashbackAdvisorServiceTest {
         when(selectionService.getActiveSelections(1L))
                 .thenReturn(List.of(selection(1L, 10L, "5")));
         Store store = new Store();
-        store.setName("Пятёрочка");
+        store.setName("РџСЏС‚С‘СЂРѕС‡РєР°");
         store.setMccCode(MCC);
-        when(storeRepository.findByNameOrAliasContaining("пятерочка"))
+        when(storeRepository.findByNameOrAliasContaining("РїСЏС‚РµСЂРѕС‡РєР°"))
                 .thenReturn(List.of(store));
         when(bankCategoryMccRepository.findByMccCodeIn(Set.of(MCC)))
                 .thenReturn(List.of(mccRow(1L, 10L)));
         when(bankExcludedMccRepository.findBankIdsByMccCodes(Set.of(MCC)))
                 .thenReturn(Set.of());
 
-        List<RecommendationDto> result = service.recommend(1L, "пятерочка");
+        List<RecommendationDto> result = service.recommend(1L, "РїСЏС‚РµСЂРѕС‡РєР°");
 
         assertThat(result).singleElement()
                 .satisfies(recommendation -> {
@@ -143,25 +144,40 @@ class CashbackAdvisorServiceTest {
                 .thenReturn(List.of(selection(1L, 10L, "5")));
         Category storeCategory = new Category();
         storeCategory.setId(10L);
-        storeCategory.setName("Супермаркеты");
+        storeCategory.setName("РЎСѓРїРµСЂРјР°СЂРєРµС‚С‹");
         Store store = new Store();
-        store.setName("Пятёрочка");
+        store.setName("РџСЏС‚С‘СЂРѕС‡РєР°");
         store.setMccCode(MCC);
         store.setCategory(storeCategory);
-        when(storeRepository.findByNameOrAliasContaining("пятерочка"))
+        when(storeRepository.findByNameOrAliasContaining("РїСЏС‚РµСЂРѕС‡РєР°"))
                 .thenReturn(List.of(store));
         when(bankCategoryMccRepository.findByMccCodeIn(Set.of(MCC)))
                 .thenReturn(List.of());
         when(bankExcludedMccRepository.findBankIdsByMccCodes(Set.of(MCC)))
                 .thenReturn(Set.of());
 
-        List<RecommendationDto> result = service.recommend(1L, "пятерочка");
+        List<RecommendationDto> result = service.recommend(1L, "РїСЏС‚РµСЂРѕС‡РєР°");
 
         assertThat(result).singleElement()
                 .satisfies(recommendation -> {
                     assertThat(recommendation.categoryName()).isEqualTo("Category10");
                     assertThat(recommendation.percent()).isEqualByComparingTo("5");
                 });
+    }
+
+    @Test
+    void shouldEscapeLikeWildcards_whenSearchingByText() {
+        when(selectionService.getActiveSelections(1L))
+                .thenReturn(List.of(selection(1L, 10L, "5")));
+        when(storeRepository.findByNameOrAliasContaining("50!%!_!!"))
+                .thenReturn(List.of());
+        when(categoryRepository.findByNameOrAliasContaining("50!%!_!!"))
+                .thenReturn(List.of());
+
+        assertThat(service.recommend(1L, "50%_!")).isEmpty();
+
+        verify(storeRepository).findByNameOrAliasContaining("50!%!_!!");
+        verify(categoryRepository).findByNameOrAliasContaining("50!%!_!!");
     }
 
     private ActiveSelectionDto selection(Long bankId, Long categoryId, String percent) {

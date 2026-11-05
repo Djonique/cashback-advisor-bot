@@ -4,6 +4,7 @@ import com.djonique.cashbackadvbot.domain.Category;
 import com.djonique.cashbackadvbot.domain.MccCode;
 import com.djonique.cashbackadvbot.domain.Store;
 import com.djonique.cashbackadvbot.dto.ActiveSelectionDto;
+import com.djonique.cashbackadvbot.dto.BankCategoryKey;
 import com.djonique.cashbackadvbot.dto.RecommendationDto;
 import com.djonique.cashbackadvbot.repository.BankCategoryMccRepository;
 import com.djonique.cashbackadvbot.repository.BankExcludedMccRepository;
@@ -47,7 +48,7 @@ public class CashbackAdvisorService {
                 ? matchByMccCode(trimmedInput, selections)
                 : matchByText(trimmedInput, selections);
 
-        log.debug("Подобрано рекомендаций: {} для userId={}, input='{}'", matched.size(), userId, trimmedInput);
+        log.debug("Совпадений: {}, userId={}", matched.size(), userId);
 
         return matched.stream()
                 .map(selection -> new RecommendationDto(
@@ -138,8 +139,5 @@ public class CashbackAdvisorService {
         return value.replace("!", "!!")
                 .replace("%", "!%")
                 .replace("_", "!_");
-    }
-
-    private record BankCategoryKey(Long bankId, Long categoryId) {
     }
 }

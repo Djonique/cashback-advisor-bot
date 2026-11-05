@@ -3,9 +3,9 @@ services:
     image: postgres:16-alpine
     container_name: cashback-db
     environment:
-      POSTGRES_DB: cashback
-      POSTGRES_USER: cashback
-      POSTGRES_PASSWORD: cashback
+      POSTGRES_DB: ${DB_NAME:-cashback}
+      POSTGRES_USER: ${DB_USERNAME:-cashback}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-cashback}
     ports:
       - "5432:5432"
     volumes:

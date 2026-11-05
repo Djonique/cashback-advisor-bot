@@ -8,6 +8,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -15,11 +16,19 @@ import java.util.Objects;
 public class UserService {
 
     private final AppUserRepository appUserRepository;
+    private final ConcurrentHashMap<Long, AppUser> cache = new ConcurrentHashMap<>();
 
     public AppUser findOrCreate(Long telegramChatId, String username) {
-        return appUserRepository.findByTelegramChatId(telegramChatId)
-                .map(user -> updateUsernameIfChanged(user, username))
+        AppUser cached = cache.get(telegramChatId);
+        if (cached != null) {
+            return updateUsernameIfChanged(cached, username);
+        }
+
+        AppUser user = appUserRepository.findByTelegramChatId(telegramChatId)
+                .map(existing -> updateUsernameIfChanged(existing, username))
                 .orElseGet(() -> createUser(telegramChatId, username));
+        cache.put(telegramChatId, user);
+        return user;
     }
 
     private AppUser createUser(Long telegramChatId, String username) {
@@ -42,6 +51,7 @@ public class UserService {
         if (!Objects.equals(user.getUsername(), username)) {
             user.setUsername(username);
             AppUser saved = appUserRepository.save(user);
+            cache.put(saved.getTelegramChatId(), saved);
             log.info("Обновлён username пользователя: id={}", saved.getId());
             return saved;
         }

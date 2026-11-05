@@ -25,6 +25,18 @@ public interface BankCategoryRepository extends JpaRepository<BankCategory, Long
     @EntityGraph(attributePaths = {"category", "bank"})
     List<BankCategory> findAllByBankIdIn(Collection<Long> bankIds);
 
+    @EntityGraph(attributePaths = {"category", "bank"})
+    @Query("""
+            SELECT bc FROM BankCategory bc
+            WHERE bc.bank.id = :bankId
+              AND bc.category.id IN :categoryIds
+            """)
+    List<BankCategory> findAllByBankIdAndCategoryIds(
+            @Param("bankId") Long bankId,
+            @Param("categoryIds") Collection<Long> categoryIds);
+
     @Query("SELECT bc.category.id FROM BankCategory bc WHERE bc.bank.id = :bankId")
     Set<Long> findCategoryIdsByBankId(@Param("bankId") Long bankId);
+
+    boolean existsByBank_IdAndCategory_Id(Long bankId, Long categoryId);
 }

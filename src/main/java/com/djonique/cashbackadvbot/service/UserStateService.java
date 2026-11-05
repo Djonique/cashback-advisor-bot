@@ -3,6 +3,7 @@ package com.djonique.cashbackadvbot.service;
 import com.djonique.cashbackadvbot.bot.state.DialogState;
 import com.djonique.cashbackadvbot.domain.AppUser;
 import com.djonique.cashbackadvbot.domain.UserState;
+import com.djonique.cashbackadvbot.exception.ValidationException;
 import com.djonique.cashbackadvbot.repository.UserStateRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +29,7 @@ public class UserStateService {
 
     @Transactional
     public void setState(AppUser user, DialogState state, Object contextObject) {
-        UserState userState = userStateRepository.findById(user.getId())
+        UserState userState = userStateRepository.findByIdForUpdate(user.getId())
                 .orElseGet(() -> newUserState(user));
 
         userState.setState(state.name());
@@ -64,7 +65,7 @@ public class UserStateService {
                                DialogState state,
                                Class<T> type,
                                UnaryOperator<T> mutator) {
-        UserState userState = userStateRepository.findById(user.getId())
+        UserState userState = userStateRepository.findByIdForUpdate(user.getId())
                 .orElseGet(() -> newUserState(user));
 
         T current = userState.getContext() == null || userState.getContext().isBlank()
@@ -120,7 +121,7 @@ public class UserStateService {
         } catch (JacksonException e) {
             log.error("Не удалось разобрать контекст диалога userId={} в тип {}",
                     userId, type.getSimpleName(), e);
-            return null;
+            throw new ValidationException("Контекст диалога повреждён, начните заново");
         }
     }
 }

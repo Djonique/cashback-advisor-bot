@@ -1,6 +1,6 @@
 package com.djonique.cashbackadvbot.bot.handler;
 
-import com.djonique.cashbackadvbot.bot.TelegramMessageSender;
+import com.djonique.cashbackadvbot.bot.BotSender;
 import com.djonique.cashbackadvbot.bot.keyboard.KeyboardFactory;
 import com.djonique.cashbackadvbot.bot.state.DialogState;
 import com.djonique.cashbackadvbot.domain.AppUser;
@@ -13,8 +13,11 @@ import com.djonique.cashbackadvbot.service.SelectionService;
 import com.djonique.cashbackadvbot.service.UserStateService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
-import org.telegram.telegrambots.meta.bots.AbsSender;
+import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
+import org.telegram.telegrambots.meta.api.objects.MaybeInaccessibleMessage;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -33,23 +36,28 @@ public class SetupDialogHandler {
     private static final String SAVED_TEXT = "✅ Настройки сохранены! Теперь вы можете выбрать карту";
     private static final String STALE_SESSION_TEXT = "Сессия настройки устарела, начните заново";
     private static final String SAVE_ERROR_TEXT = "Не удалось сохранить настройки, начните заново";
+    private static final String BANK_NOT_FOUND_TEXT = "Банк не найден, начните настройку заново";
 
     private final UserStateService userStateService;
     private final SelectionService selectionService;
     private final BankCatalogService bankCatalogService;
     private final KeyboardFactory keyboardFactory;
-    private final TelegramMessageSender messageSender;
+    private final BotSender botSender;
 
-    public void startPercentInput(AppUser user, SelectionContext context, AbsSender sender) {
+    public void startPercentInput(AppUser user, SelectionContext context) {
+        startPercentInput(user, context, null);
+    }
+
+    public void startPercentInput(AppUser user, SelectionContext context, CallbackQuery callbackQuery) {
         Set<Long> selectedCategoryIds = context.selectedCategoryIds();
         if (selectedCategoryIds == null || selectedCategoryIds.isEmpty()) {
-            messageSender.send(user.getTelegramChatId(), EMPTY_SELECTION_TEXT, null, sender);
+            reply(user, callbackQuery, EMPTY_SELECTION_TEXT, keyboardFactory.getBackToMainKeyboard());
             return;
         }
         if (context.bankId() == null || !bankCatalogService.bankExists(context.bankId())) {
             log.warn("Банк из контекста не найден: bankId={}", context.bankId());
             userStateService.clearState(user);
-            messageSender.send(user.getTelegramChatId(), "Банк не найден, начните настройку заново", null, sender);
+            reply(user, callbackQuery, BANK_NOT_FOUND_TEXT, keyboardFactory.getMainMenuKeyboard());
             return;
         }
 
@@ -62,13 +70,43 @@ public class SetupDialogHandler {
         userStateService.setState(user, DialogState.ENTERING_PERCENT, updatedContext);
         log.info("Начат ввод процентов: userId={}, категорий={}",
                 user.getId(), updatedContext.pendingCategories().size());
-        askNextCategory(user, updatedContext, sender);
+        askNextCategory(user, updatedContext, callbackQuery);
     }
 
-    public void askNextCategory(AppUser user, SelectionContext context, AbsSender sender) {
+    public void handlePercentInput(AppUser user, String input) {
+        BigDecimal percent = CashbackPercent.parse(input).orElse(null);
+        if (percent == null) {
+            botSender.send(user.getTelegramChatId(), INVALID_PERCENT_TEXT, null);
+            return;
+        }
+
+        SelectionContext updatedContext;
+        try {
+            updatedContext = userStateService.updateContext(
+                    user,
+                    DialogState.ENTERING_PERCENT,
+                    SelectionContext.class,
+                    current -> applyPercent(current, percent));
+        } catch (ValidationException e) {
+            log.warn("Ввод процента без активного контекста: userId={}", user.getId());
+            userStateService.clearState(user);
+            botSender.send(user.getTelegramChatId(), STALE_SESSION_TEXT,
+                    keyboardFactory.getMainMenuKeyboard());
+            return;
+        }
+
+        log.debug("Введён процент: userId={}, percent={}", user.getId(), percent);
+        askNextCategory(user, updatedContext);
+    }
+
+    private void askNextCategory(AppUser user, SelectionContext context) {
+        askNextCategory(user, context, null);
+    }
+
+    private void askNextCategory(AppUser user, SelectionContext context, CallbackQuery callbackQuery) {
         List<Long> pendingCategories = context.pendingCategories();
         if (pendingCategories == null || pendingCategories.isEmpty()) {
-            finishSetup(user, context, sender);
+            finishSetup(user, context);
             return;
         }
 
@@ -85,37 +123,77 @@ public class SetupDialogHandler {
                     context.percents(),
                     remaining);
             userStateService.setState(user, DialogState.ENTERING_PERCENT, updatedContext);
-            askNextCategory(user, updatedContext, sender);
+            askNextCategory(user, updatedContext, callbackQuery);
             return;
         }
 
-        String text = "Введите процент кэшбэка для категории «" + categoryName + "» (например, 5 или 7.5):";
-        messageSender.send(user.getTelegramChatId(), text, null, sender);
+        String text = "Введите процент кешбэка для категории «" + categoryName + "» (например, 5 или 7.5):";
+        reply(user, callbackQuery, text, null);
     }
 
-    public void handlePercentInput(AppUser user, String input, AbsSender sender) {
-        BigDecimal percent = CashbackPercent.parse(input).orElse(null);
-        if (percent == null) {
-            messageSender.send(user.getTelegramChatId(), INVALID_PERCENT_TEXT, null, sender);
-            return;
+    private void reply(AppUser user,
+                       CallbackQuery callbackQuery,
+                       String text,
+                       InlineKeyboardMarkup keyboard) {
+        if (callbackQuery != null && callbackQuery.getMessage() != null) {
+            MaybeInaccessibleMessage message = callbackQuery.getMessage();
+            if (botSender.editMessageText(message.getChatId(), message.getMessageId(), text, keyboard)) {
+                return;
+            }
         }
+        botSender.send(user.getTelegramChatId(), text, keyboard);
+    }
 
-        SelectionContext updatedContext;
-        try {
-            updatedContext = userStateService.updateContext(
-                    user,
-                    DialogState.ENTERING_PERCENT,
-                    SelectionContext.class,
-                    current -> applyPercent(current, percent));
-        } catch (ValidationException e) {
-            log.warn("Ввод процента без активного контекста: userId={}", user.getId());
+    private void finishSetup(AppUser user, SelectionContext context) {
+        if (context.bankId() == null) {
+            log.warn("Завершение настройки без банка: userId={}", user.getId());
             userStateService.clearState(user);
-            messageSender.send(user.getTelegramChatId(), STALE_SESSION_TEXT, null, sender);
+            botSender.send(user.getTelegramChatId(), STALE_SESSION_TEXT,
+                    keyboardFactory.getMainMenuKeyboard());
             return;
         }
 
-        log.info("Введён процент: userId={}, percent={}", user.getId(), percent);
-        askNextCategory(user, updatedContext, sender);
+        Map<Long, BigDecimal> percents = context.percents() == null ? Map.of() : context.percents();
+        Set<Long> selectedCategoryIds = context.selectedCategoryIds() == null
+                ? Set.of()
+                : context.selectedCategoryIds();
+        List<SelectionInput> inputs = selectedCategoryIds.stream()
+                .filter(percents::containsKey)
+                .map(categoryId -> new SelectionInput(categoryId, percents.get(categoryId)))
+                .toList();
+
+        if (inputs.size() != selectedCategoryIds.size()) {
+            log.warn("Не удалось собрать проценты для всех категорий: userId={}, выбрано={}, собрано={}",
+                    user.getId(), selectedCategoryIds.size(), inputs.size());
+            userStateService.clearState(user);
+            botSender.send(user.getTelegramChatId(), SAVE_ERROR_TEXT,
+                    keyboardFactory.getMainMenuKeyboard());
+            return;
+        }
+
+        try {
+            selectionService.replaceSelection(user.getId(), context.bankId(), inputs);
+        } catch (ValidationException e) {
+            log.warn("Некорректная настройка: userId={}, причина={}", user.getId(), e.getMessage());
+            userStateService.clearState(user);
+            botSender.send(user.getTelegramChatId(), "Ошибка: " + e.getMessage(),
+                    keyboardFactory.getMainMenuKeyboard());
+            return;
+        } catch (OptimisticLockingFailureException e) {
+            log.warn("Конфликт при сохранении настроек: userId={}, bankId={}",
+                    user.getId(), context.bankId());
+            userStateService.clearState(user);
+            botSender.send(user.getTelegramChatId(),
+                    "Настройки изменились в другом сообщении, начните заново",
+                    keyboardFactory.getMainMenuKeyboard());
+            return;
+        }
+
+        userStateService.clearState(user);
+
+        log.info("Настройки сохранены: userId={}, bankId={}, категорий={}",
+                user.getId(), context.bankId(), inputs.size());
+        botSender.send(user.getTelegramChatId(), SAVED_TEXT, keyboardFactory.getMainMenuKeyboard());
     }
 
     private SelectionContext applyPercent(SelectionContext current, BigDecimal percent) {
@@ -141,49 +219,4 @@ public class SetupDialogHandler {
                 percents,
                 pendingCategories);
     }
-
-    private void finishSetup(AppUser user, SelectionContext context, AbsSender sender) {
-        if (context.bankId() == null) {
-            log.warn("Завершение настройки без банка: userId={}", user.getId());
-            userStateService.clearState(user);
-            messageSender.send(user.getTelegramChatId(), STALE_SESSION_TEXT,
-                    keyboardFactory.getMainMenuKeyboard(), sender);
-            return;
-        }
-
-        Map<Long, BigDecimal> percents = context.percents() == null ? Map.of() : context.percents();
-        Set<Long> selectedCategoryIds = context.selectedCategoryIds() == null
-                ? Set.of()
-                : context.selectedCategoryIds();
-        List<SelectionInput> inputs = selectedCategoryIds.stream()
-                .filter(percents::containsKey)
-                .map(categoryId -> new SelectionInput(categoryId, percents.get(categoryId)))
-                .toList();
-
-        if (inputs.isEmpty() && !selectedCategoryIds.isEmpty()) {
-            log.warn("Не удалось собрать проценты для выбранных категорий: userId={}", user.getId());
-            userStateService.clearState(user);
-            messageSender.send(user.getTelegramChatId(), SAVE_ERROR_TEXT,
-                    keyboardFactory.getMainMenuKeyboard(), sender);
-            return;
-        }
-
-        try {
-            selectionService.replaceSelection(user.getId(), context.bankId(), inputs);
-        } catch (ValidationException e) {
-            log.warn("Некорректная настройка: userId={}, причина={}", user.getId(), e.getMessage());
-            userStateService.clearState(user);
-            messageSender.send(user.getTelegramChatId(), "Ошибка: " + e.getMessage(),
-                    keyboardFactory.getMainMenuKeyboard(), sender);
-            return;
-        }
-
-        userStateService.clearState(user);
-
-        log.info("Настройки сохранены: userId={}, bankId={}, категорий={}",
-                user.getId(), context.bankId(), inputs.size());
-        messageSender.send(user.getTelegramChatId(), SAVED_TEXT,
-                keyboardFactory.getMainMenuKeyboard(), sender);
-    }
-
 }

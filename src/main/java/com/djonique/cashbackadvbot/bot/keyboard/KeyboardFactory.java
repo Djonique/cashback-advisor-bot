@@ -1,5 +1,6 @@
 package com.djonique.cashbackadvbot.bot.keyboard;
 
+import com.djonique.cashbackadvbot.bot.BotButtons;
 import com.djonique.cashbackadvbot.bot.CallbackData;
 import com.djonique.cashbackadvbot.domain.Bank;
 import com.djonique.cashbackadvbot.domain.BankCategory;
@@ -15,9 +16,36 @@ public class KeyboardFactory {
 
     public InlineKeyboardMarkup getMainMenuKeyboard() {
         return InlineKeyboardMarkup.builder()
-                .keyboardRow(List.of(button("💳 Выбрать карту для оплаты", CallbackData.MENU_CHOOSE)))
-                .keyboardRow(List.of(button("⚙️ Настроить кешбэк", CallbackData.MENU_SETUP)))
-                .keyboardRow(List.of(button("❤️ Поддержать проект", CallbackData.MENU_SUPPORT)))
+                .keyboardRow(List.of(button("💳 " + BotButtons.CHOOSE_CARD, CallbackData.MENU_CHOOSE)))
+                .keyboardRow(List.of(button("⚙️ " + BotButtons.SETUP, CallbackData.MENU_SETUP)))
+                .keyboardRow(List.of(button("❤️ " + BotButtons.SUPPORT, CallbackData.MENU_SUPPORT)))
+                .keyboardRow(List.of(button("🆘 " + BotButtons.HELP, CallbackData.MENU_HELP)))
+                .build();
+    }
+
+    public InlineKeyboardMarkup getBackToMainKeyboard() {
+        return InlineKeyboardMarkup.builder()
+                .keyboardRow(List.of(button("🔙 " + BotButtons.BACK_TO_MENU, CallbackData.MENU_MAIN)))
+                .build();
+    }
+
+    public InlineKeyboardMarkup getSupportMenuKeyboard() {
+        return InlineKeyboardMarkup.builder()
+                .keyboardRow(List.of(button("🍔 " + BotButtons.SUPPORT_BURGER, CallbackData.SUPPORT_100)))
+                .keyboardRow(List.of(button("🖥 " + BotButtons.SUPPORT_SERVER, CallbackData.SUPPORT_250)))
+                .keyboardRow(List.of(button("🚀 " + BotButtons.SUPPORT_DEPOSIT, CallbackData.SUPPORT_500)))
+                .keyboardRow(List.of(button("🔙 " + BotButtons.BACK, CallbackData.MENU_MAIN)))
+                .build();
+    }
+
+    public InlineKeyboardMarkup getHelpMenuKeyboard() {
+        return InlineKeyboardMarkup.builder()
+                .keyboardRow(List.of(button("❓ " + BotButtons.HELP_GENERAL, CallbackData.HELP_GENERAL)))
+                .keyboardRow(List.of(button("⚙️ " + BotButtons.HELP_SETUP, CallbackData.HELP_SETUP)))
+                .keyboardRow(List.of(button("🏪 " + BotButtons.HELP_STORE, CallbackData.HELP_STORE)))
+                .keyboardRow(List.of(button("🗂 " + BotButtons.HELP_CATEGORY, CallbackData.HELP_CATEGORY)))
+                .keyboardRow(List.of(button("🔢 " + BotButtons.HELP_MCC, CallbackData.HELP_MCC)))
+                .keyboardRow(List.of(button("🔙 " + BotButtons.BACK_TO_MENU, CallbackData.MENU_MAIN)))
                 .build();
     }
 
@@ -25,7 +53,7 @@ public class KeyboardFactory {
         InlineKeyboardMarkup.InlineKeyboardMarkupBuilder builder = InlineKeyboardMarkup.builder();
         banks.forEach(bank -> builder.keyboardRow(
                 List.of(button(bank.getName(), CallbackData.SETUP_BANK_PREFIX + bank.getId()))));
-        builder.keyboardRow(List.of(button("🔙 Назад", CallbackData.MENU_MAIN)));
+        builder.keyboardRow(List.of(button("🔙 " + BotButtons.BACK, CallbackData.MENU_MAIN)));
         return builder.build();
     }
 
@@ -38,17 +66,23 @@ public class KeyboardFactory {
             builder.keyboardRow(List.of(button(text, CallbackData.SETUP_TOGGLE_PREFIX + categoryId)));
         });
         builder.keyboardRow(List.of(
-                button("✅ Готово", CallbackData.SETUP_DONE),
-                button("🔙 Назад", CallbackData.MENU_SETUP)));
+                button("✅ " + BotButtons.DONE, CallbackData.SETUP_DONE),
+                button("🔙 " + BotButtons.BACK, CallbackData.MENU_SETUP)));
         return builder.build();
+    }
+
+    public InlineKeyboardMarkup getBackToCardMenuKeyboard() {
+        return InlineKeyboardMarkup.builder()
+                .keyboardRow(List.of(button("🔙 " + BotButtons.BACK, CallbackData.CARD_MENU)))
+                .build();
     }
 
     public InlineKeyboardMarkup getCardSearchMenuKeyboard() {
         return InlineKeyboardMarkup.builder()
-                .keyboardRow(List.of(button("🔤 Ввести категорию", CallbackData.CARD_BY_CATEGORY)))
-                .keyboardRow(List.of(button("🔢 Ввести MCC-код", CallbackData.CARD_BY_MCC)))
-                .keyboardRow(List.of(button("🏪 Ввести магазин", CallbackData.CARD_BY_STORE)))
-                .keyboardRow(List.of(button("🔙 Назад", CallbackData.MENU_MAIN)))
+                .keyboardRow(List.of(button("🔤 " + BotButtons.CARD_BY_CATEGORY, CallbackData.CARD_BY_CATEGORY)))
+                .keyboardRow(List.of(button("🔢 " + BotButtons.CARD_BY_MCC, CallbackData.CARD_BY_MCC)))
+                .keyboardRow(List.of(button("🏪 " + BotButtons.CARD_BY_STORE, CallbackData.CARD_BY_STORE)))
+                .keyboardRow(List.of(button("🔙 " + BotButtons.BACK, CallbackData.MENU_MAIN)))
                 .build();
     }
 

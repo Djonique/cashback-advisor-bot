@@ -4,6 +4,9 @@
 -- СУБД: PostgreSQL 16
 -- ============================================================================
 
+-- Нужен для быстрого поиска по подстроке (LIKE '%...%').
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
 CREATE TABLE bank (
     id            BIGSERIAL    PRIMARY KEY,
     name          VARCHAR(100) NOT NULL,
@@ -21,7 +24,9 @@ CREATE TABLE category (
     slug VARCHAR(50)  NOT NULL,
     CONSTRAINT ux_category_slug UNIQUE (slug)
 );
-COMMENT ON TABLE category IS 'Категории кэшбэка, общие для всех банков';
+COMMENT ON TABLE category IS 'Категории кешбэка, общие для всех банков';
+
+CREATE INDEX idx_category_name_trgm ON category USING GIN (lower(name) gin_trgm_ops);
 
 CREATE TABLE bank_category (
     id          BIGSERIAL PRIMARY KEY,
@@ -55,7 +60,7 @@ CREATE TABLE bank_excluded_mcc (
     CONSTRAINT ux_bem_pair UNIQUE (bank_id, mcc_code),
     CONSTRAINT chk_bem_mcc_format CHECK (mcc_code ~ '^[0-9]{4}$')
 );
-COMMENT ON TABLE bank_excluded_mcc IS 'MCC-коды, по которым банк не начисляет кэшбэк (из PDF)';
+COMMENT ON TABLE bank_excluded_mcc IS 'MCC-коды, по которым банк не начисляет кешбэк (из PDF)';
 
 CREATE INDEX idx_bank_excluded_mcc_code ON bank_excluded_mcc (mcc_code);
 COMMENT ON INDEX idx_bank_excluded_mcc_code IS 'Поиск банков, исключивших MCC';
@@ -68,6 +73,8 @@ CREATE TABLE category_alias (
 );
 COMMENT ON TABLE category_alias IS 'Синонимы названий категорий для поиска (например, АЗС для Топливо)';
 
+CREATE INDEX idx_category_alias_alias_trgm ON category_alias USING GIN (lower(alias) gin_trgm_ops);
+
 -- ----------------------------------------------------------------------------
 -- Пользовательские данные (создаются в рантайме)
 -- ----------------------------------------------------------------------------
@@ -76,7 +83,7 @@ CREATE TABLE app_user (
     id               BIGSERIAL   PRIMARY KEY,
     telegram_chat_id BIGINT      NOT NULL,
     username         VARCHAR(255) NULL,
-    created_at       TIMESTAMP   NOT NULL DEFAULT now(),
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT ux_app_user_chat_id UNIQUE (telegram_chat_id)
 );
 COMMENT ON TABLE  app_user                  IS 'Пользователи Telegram-бота';
@@ -89,7 +96,7 @@ CREATE TABLE user_bank_selection (
     category_id      BIGINT       NOT NULL,
     year_month       CHAR(7)      NOT NULL,
     cashback_percent NUMERIC(5,2) NOT NULL,
-    created_at       TIMESTAMP    NOT NULL DEFAULT now(),
+    created_at       TIMESTAMPTZ  NOT NULL DEFAULT now(),
     CONSTRAINT fk_ubs_user FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE,
     CONSTRAINT fk_ubs_bank FOREIGN KEY (bank_id) REFERENCES bank(id) ON DELETE RESTRICT,
     CONSTRAINT fk_ubs_category FOREIGN KEY (category_id) REFERENCES category(id) ON DELETE RESTRICT,
@@ -108,10 +115,10 @@ CREATE TABLE user_state (
     state      VARCHAR(50) NOT NULL,
     context    JSONB       NULL,
     version    BIGINT      NOT NULL DEFAULT 0,
-    updated_at TIMESTAMP   NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT fk_user_state_user FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 );
 COMMENT ON TABLE  user_state         IS 'Текущее состояние диалога (FSM) для каждого пользователя';
-COMMENT ON COLUMN user_state.state   IS 'IDLE | CHOOSING_BANK | CHOOSING_CATEGORIES | ENTERING_PERCENT | REVIEW | CARD_INPUT_MCC | CARD_INPUT_CATEGORY';
+COMMENT ON COLUMN user_state.state   IS 'IDLE | CHOOSING_BANK | CHOOSING_CATEGORIES | ENTERING_PERCENT | CARD_INPUT_MCC | CARD_INPUT_CATEGORY | CARD_INPUT_STORE';
 COMMENT ON COLUMN user_state.context IS 'Временные данные диалога (bankId, selectedCategoryIds, percents), JSON';
 COMMENT ON COLUMN user_state.version IS 'Версия строки для оптимистической блокировки (@Version)';

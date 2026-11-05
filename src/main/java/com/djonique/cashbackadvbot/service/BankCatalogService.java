@@ -37,6 +37,12 @@ public class BankCatalogService {
     }
 
     @Transactional(readOnly = true)
+    public boolean categoryBelongsToBank(Long bankId, Long categoryId) {
+        return bankId != null && categoryId != null
+                && bankCategoryRepository.existsByBank_IdAndCategory_Id(bankId, categoryId);
+    }
+
+    @Transactional(readOnly = true)
     public Optional<String> findCategoryName(Long categoryId) {
         return categoryRepository.findById(categoryId).map(Category::getName);
     }

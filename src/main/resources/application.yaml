@@ -2,7 +2,7 @@ spring:
   application:
     name: cashback-advisor-bot
 
-  # Подключение к PostgreSQL (Docker)
+  # Подключение к PostgreSQL. В продакшене задайте переменные окружения.
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/cashback}
     username: ${DB_USERNAME:cashback}
@@ -27,6 +27,12 @@ telegrambots:
   enabled: false
 
 app:
+  github:
+    url: "https://github.com/djonique/cashback-advisor-bot"
+  support:
+    burger-url: "https://example.com/100"
+    server-url: "https://example.com/250"
+    deploy-url: "https://example.com/500"
   telegram:
     bot-token: ${TELEGRAM_BOT_TOKEN:}
     bot-username: ${TELEGRAM_BOT_USERNAME:CashbackAdvBot}
@@ -36,4 +42,4 @@ app:
 logging:
   level:
     root: INFO
-    com.djonique.cashbackadvbot: DEBUG
+    com.djonique.cashbackadvbot: INFO

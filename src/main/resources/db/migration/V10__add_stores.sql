@@ -7,13 +7,18 @@ CREATE TABLE store (
     name VARCHAR(100) NOT NULL,
     aliases VARCHAR(500),
     category_id BIGINT NOT NULL REFERENCES category(id) ON DELETE CASCADE,
-    mcc_code CHAR(4) NOT NULL
+    mcc_code CHAR(4) NOT NULL,
+    CONSTRAINT ux_store_name UNIQUE (name),
+    CONSTRAINT chk_store_mcc_format CHECK (mcc_code ~ '^[0-9]{4}$')
 );
 
-CREATE INDEX ix_store_category_id ON store (category_id);
+CREATE INDEX idx_store_category_id ON store (category_id);
 
 CREATE INDEX idx_store_mcc_code ON store (mcc_code);
 COMMENT ON INDEX idx_store_mcc_code IS 'Поиск магазинов по MCC-коду';
+
+CREATE INDEX idx_store_name_trgm ON store USING GIN (lower(name) gin_trgm_ops);
+CREATE INDEX idx_store_aliases_trgm ON store USING GIN (lower(aliases) gin_trgm_ops);
 
 INSERT INTO store (name, aliases, category_id, mcc_code) VALUES
 

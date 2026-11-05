@@ -6,7 +6,7 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 
 /**
- * Разбор и валидация процента кэшбэка, который вводит пользователь.
+ * Разбор и валидация процента кешбэка, который вводит пользователь.
  * Ограничиваем формат до BigDecimal, чтобы исключить огромные экспоненты.
  */
 public final class CashbackPercent {

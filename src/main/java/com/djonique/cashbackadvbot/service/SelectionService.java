@@ -6,6 +6,7 @@ import com.djonique.cashbackadvbot.domain.CashbackPercent;
 import com.djonique.cashbackadvbot.domain.Category;
 import com.djonique.cashbackadvbot.domain.UserBankSelection;
 import com.djonique.cashbackadvbot.dto.ActiveSelectionDto;
+import com.djonique.cashbackadvbot.dto.BankCategoryKey;
 import com.djonique.cashbackadvbot.dto.SelectionInput;
 import com.djonique.cashbackadvbot.exception.ValidationException;
 import com.djonique.cashbackadvbot.repository.BankCategoryRepository;
@@ -75,14 +76,20 @@ public class SelectionService {
     }
 
     private Map<BankCategoryKey, String> loadLocalCategoryNames(List<UserBankSelection> selections) {
-        Set<Long> bankIds = selections.stream()
-                .map(selection -> selection.getBank().getId())
-                .collect(Collectors.toSet());
-        if (bankIds.isEmpty()) {
+        Map<Long, Set<Long>> categoryIdsByBank = selections.stream()
+                .collect(Collectors.groupingBy(
+                        selection -> selection.getBank().getId(),
+                        Collectors.mapping(
+                                selection -> selection.getCategory().getId(),
+                                Collectors.toSet())));
+        if (categoryIdsByBank.isEmpty()) {
             return Map.of();
         }
 
-        return bankCategoryRepository.findAllByBankIdIn(bankIds).stream()
+        return categoryIdsByBank.entrySet().stream()
+                .flatMap(entry -> bankCategoryRepository
+                        .findAllByBankIdAndCategoryIds(entry.getKey(), entry.getValue())
+                        .stream())
                 .collect(Collectors.toMap(
                         bankCategory -> new BankCategoryKey(
                                 bankCategory.getBank().getId(),
@@ -129,8 +136,5 @@ public class SelectionService {
 
     private String currentYearMonth() {
         return YearMonth.now(MOSCOW_ZONE).toString();
-    }
-
-    private record BankCategoryKey(Long bankId, Long categoryId) {
     }
 }

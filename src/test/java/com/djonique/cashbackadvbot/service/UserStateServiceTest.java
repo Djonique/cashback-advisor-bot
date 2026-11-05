@@ -67,7 +67,7 @@ class UserStateServiceTest {
         state.setUser(user);
         state.setState(DialogState.IDLE.name());
 
-        when(userStateRepository.findById(1L)).thenReturn(Optional.of(state));
+        when(userStateRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(state));
         when(objectMapper.writeValueAsString(any())).thenReturn("{\"bankId\":2}");
 
         SelectionContext result = userStateService.updateContext(
