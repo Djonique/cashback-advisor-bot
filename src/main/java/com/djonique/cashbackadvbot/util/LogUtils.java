@@ -8,6 +8,8 @@ import java.util.regex.Pattern;
 public final class LogUtils {
 
     private static final Pattern BOT_TOKEN = Pattern.compile("bot\\d+:[A-Za-z0-9_-]+");
+    private static final Pattern PAYMENT_PROVIDER_TOKEN =
+            Pattern.compile("\\b\\d{6,12}:(?:TEST|LIVE):[A-Za-z0-9_-]+\\b");
 
     private LogUtils() {
     }
@@ -25,6 +27,7 @@ public final class LogUtils {
         if (message == null) {
             return throwable.getClass().getSimpleName();
         }
-        return BOT_TOKEN.matcher(message).replaceAll("bot<TOKEN>");
+        String sanitized = BOT_TOKEN.matcher(message).replaceAll("bot<TOKEN>");
+        return PAYMENT_PROVIDER_TOKEN.matcher(sanitized).replaceAll("<PAYMENT_PROVIDER_TOKEN>");
     }
 }

@@ -38,7 +38,7 @@ class PaymentServiceTest {
     @BeforeEach
     void setUp() {
         paymentService = new PaymentService(
-                new PaymentProperties("test-provider-token"),
+                new PaymentProperties("live-provider-token"),
                 paymentRepository,
                 paymentInvoiceRepository);
     }
@@ -56,7 +56,7 @@ class PaymentServiceTest {
         SendInvoice invoice = captor.getValue();
         assertThat(invoice.getChatId()).isEqualTo("123");
         assertThat(invoice.getTitle()).isEqualTo("Донат");
-        assertThat(invoice.getDescription()).isEqualTo("Спасибо за поддержку");
+        assertThat(invoice.getDescription()).isEqualTo("Поддержка проекта «Кешбэк Помощник»");
         assertThat(invoice.getCurrency()).isEqualTo("XTR");
         assertThat(invoice.getProviderToken()).isEqualTo("xtr");
         assertThat(invoice.getPayload()).isNotBlank();
@@ -82,7 +82,7 @@ class PaymentServiceTest {
         assertThat(invoice.getTitle()).isEqualTo("Донат 100 руб");
         assertThat(invoice.getDescription()).isEqualTo("Поддержка проекта «Кешбэк Помощник»");
         assertThat(invoice.getCurrency()).isEqualTo("RUB");
-        assertThat(invoice.getProviderToken()).isEqualTo("test-provider-token");
+        assertThat(invoice.getProviderToken()).isEqualTo("live-provider-token");
         assertThat(invoice.getPayload()).isNotBlank();
         assertThat(invoice.getPrices()).singleElement()
                 .satisfies(price -> {

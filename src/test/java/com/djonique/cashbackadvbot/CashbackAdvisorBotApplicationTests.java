@@ -12,7 +12,7 @@ import org.springframework.test.context.ActiveProfiles;
 		"app.telegram.registration-enabled=false",
 		"app.telegram.bot-token=test-token",
 		"app.telegram.bot-username=TestCashbackBot",
-		"app.telegram.payments.provider-token=test-provider-token"
+		"app.telegram.payments.provider-token=live-provider-token"
 })
 class CashbackAdvisorBotApplicationTests {
 
