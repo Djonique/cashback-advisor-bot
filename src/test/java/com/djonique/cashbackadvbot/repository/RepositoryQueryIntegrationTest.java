@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,7 +21,8 @@ import static org.assertj.core.api.Assertions.assertThat;
         "telegrambots.enabled=false",
         "app.telegram.registration-enabled=false",
         "app.telegram.bot-token=test-token",
-        "app.telegram.bot-username=TestCashbackBot"
+        "app.telegram.bot-username=TestCashbackBot",
+        "app.telegram.payments.provider-token=test-provider-token"
 })
 class RepositoryQueryIntegrationTest {
 
@@ -37,6 +40,12 @@ class RepositoryQueryIntegrationTest {
 
     @Autowired
     private BankExcludedMccRepository bankExcludedMccRepository;
+
+    @Autowired
+    private PaymentRepository paymentRepository;
+
+    @Autowired
+    private AppUserRepository appUserRepository;
 
     @Autowired
     private EntityManager entityManager;
@@ -77,5 +86,29 @@ class RepositoryQueryIntegrationTest {
         entityManager.flush();
 
         assertThat(state.getVersion()).isEqualTo(1L);
+    }
+
+    @Test
+    void shouldPageUsersById() {
+        assertThat(appUserRepository.findAll(
+                PageRequest.of(0, 10, Sort.by("id"))))
+                .isNotNull();
+    }
+
+    @Test
+    @Transactional
+    void shouldInsertPaymentOnlyOnce() {
+        AppUser user = new AppUser();
+        user.setTelegramChatId(9_999_998L);
+        entityManager.persist(user);
+        entityManager.flush();
+
+        int first = paymentRepository.insertIfAbsent(
+                user.getId(), "telegram-charge-1", "provider-charge-1", null, 10_000L, "RUB");
+        int duplicate = paymentRepository.insertIfAbsent(
+                user.getId(), "telegram-charge-1", "provider-charge-1", null, 10_000L, "RUB");
+
+        assertThat(first).isEqualTo(1);
+        assertThat(duplicate).isZero();
     }
 }

@@ -6,9 +6,11 @@ public interface BotSender {
 
     boolean send(Long chatId, String text, InlineKeyboardMarkup keyboard);
 
-    boolean sendHtml(Long chatId, String text, InlineKeyboardMarkup keyboard);
+    Integer sendWithMessageId(Long chatId, String text, InlineKeyboardMarkup keyboard);
 
-    boolean answerCallback(String callbackQueryId, String text);
+    boolean deleteMessage(Long chatId, Integer messageId);
+
+    void answerCallback(String callbackQueryId, String text);
 
     boolean editMessageText(Long chatId, Integer messageId, String text, InlineKeyboardMarkup keyboard);
 

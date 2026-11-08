@@ -15,9 +15,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -25,6 +28,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class CashbackAdvisorService {
+
+    private static final String ALL_PURCHASES_SLUG = "all_purchases";
 
     private final SelectionService selectionService;
     private final BankCategoryMccRepository bankCategoryMccRepository;
@@ -50,14 +55,31 @@ public class CashbackAdvisorService {
 
         log.debug("Совпадений: {}, userId={}", matched.size(), userId);
 
-        return matched.stream()
+        // Один банк может совпасть по нескольким категориям — оставляем лучший процент.
+        Map<Long, ActiveSelectionDto> bestByBank = new LinkedHashMap<>();
+        matched.forEach(selection -> bestByBank.merge(
+                selection.bankId(),
+                selection,
+                (first, second) -> comparePercent(first, second) >= 0 ? first : second));
+
+        return bestByBank.values().stream()
                 .map(selection -> new RecommendationDto(
                         selection.bankName(),
                         selection.categoryName(),
                         selection.percent()))
                 .sorted(Comparator.comparing(RecommendationDto::percent,
-                        Comparator.nullsLast(Comparator.<BigDecimal>reverseOrder())))
+                        Comparator.nullsLast(Comparator.reverseOrder())))
                 .toList();
+    }
+
+    private int comparePercent(ActiveSelectionDto first, ActiveSelectionDto second) {
+        if (first.percent() == null) {
+            return second.percent() == null ? 0 : -1;
+        }
+        if (second.percent() == null) {
+            return 1;
+        }
+        return first.percent().compareTo(second.percent());
     }
 
     private List<ActiveSelectionDto> matchByMccCode(String mccCode, List<ActiveSelectionDto> selections) {
@@ -70,10 +92,12 @@ public class CashbackAdvisorService {
                         mcc.getBankCategory().getCategory().getId()))
                 .collect(Collectors.toSet());
 
-        return selections.stream()
+        List<ActiveSelectionDto> matched = selections.stream()
+                .filter(selection -> !isAllPurchases(selection))
                 .filter(selection -> allowedPairs.contains(
                         new BankCategoryKey(selection.bankId(), selection.categoryId())))
                 .toList();
+        return withAllPurchases(matched, selections, excludedBankIds);
     }
 
     private List<ActiveSelectionDto> matchByText(String text, List<ActiveSelectionDto> selections) {
@@ -95,7 +119,7 @@ public class CashbackAdvisorService {
 
         Set<Long> storeCategoryIds = stores.stream()
                 .map(Store::getCategory)
-                .filter(category -> category != null)
+                .filter(Objects::nonNull)
                 .map(Category::getId)
                 .collect(Collectors.toSet());
         return matchByCategoryIds(storeCategoryIds, selections);
@@ -115,10 +139,27 @@ public class CashbackAdvisorService {
                         mcc.getBankCategory().getCategory().getId()))
                 .collect(Collectors.toSet());
 
-        return selections.stream()
+        List<ActiveSelectionDto> matched = selections.stream()
+                .filter(selection -> !isAllPurchases(selection))
                 .filter(selection -> allowedPairs.contains(
                         new BankCategoryKey(selection.bankId(), selection.categoryId())))
                 .toList();
+        return withAllPurchases(matched, selections, excludedBankIds);
+    }
+
+    private List<ActiveSelectionDto> withAllPurchases(List<ActiveSelectionDto> matched,
+                                                      List<ActiveSelectionDto> selections,
+                                                      Set<Long> excludedBankIds) {
+        List<ActiveSelectionDto> result = new ArrayList<>(matched);
+        selections.stream()
+                .filter(this::isAllPurchases)
+                .filter(selection -> !excludedBankIds.contains(selection.bankId()))
+                .forEach(result::add);
+        return result;
+    }
+
+    private boolean isAllPurchases(ActiveSelectionDto selection) {
+        return ALL_PURCHASES_SLUG.equals(selection.categorySlug());
     }
 
     private List<ActiveSelectionDto> matchByCategory(String name, List<ActiveSelectionDto> selections) {

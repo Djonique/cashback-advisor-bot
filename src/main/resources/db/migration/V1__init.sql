@@ -91,6 +91,8 @@ COMMENT ON TABLE  app_user                  IS 'Пользователи Telegra
 COMMENT ON COLUMN app_user.telegram_chat_id IS 'ID чата в Telegram — первичный идентификатор пользователя';
 COMMENT ON COLUMN app_user.timezone         IS 'IANA-зона пользователя для ежемесячных напоминаний';
 
+CREATE INDEX idx_app_user_timezone ON app_user (timezone);
+
 CREATE TABLE user_bank_selection (
     id               BIGSERIAL    PRIMARY KEY,
     user_id          BIGINT       NOT NULL,
@@ -111,6 +113,8 @@ COMMENT ON COLUMN user_bank_selection.year_month       IS 'Месяц в фор�
 COMMENT ON COLUMN user_bank_selection.cashback_percent IS 'Процент, который ввёл пользователь; 0 < x <= 100';
 
 CREATE INDEX idx_ubs_user_month ON user_bank_selection (user_id, year_month);
+CREATE INDEX idx_ubs_year_month ON user_bank_selection (year_month);
+COMMENT ON INDEX idx_ubs_year_month IS 'Удаление выборов прошлых месяцев (deleteOldSelections)';
 
 CREATE TABLE user_state (
     user_id    BIGINT      PRIMARY KEY,

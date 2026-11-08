@@ -12,7 +12,7 @@ ON CONFLICT (slug) DO NOTHING;
 INSERT INTO bank_category (bank_id, category_id, local_name)
 SELECT b.id, c.id, v.local_name FROM (
     VALUES
-    ('education', 'Образование'), ('air_tickets', 'Авиабилеты'), ('railway_tickets', 'ЖД билеты'),
+    ('all_purchases', 'Все покупки'), ('education', 'Образование'), ('air_tickets', 'Авиабилеты'), ('railway_tickets', 'ЖД билеты'),
     ('hotels', 'Отели'), ('transport', 'Транспорт'), ('taxi', 'Такси'),
     ('carsharing', 'Каршеринг'), ('auto_services', 'Автоуслуги'), ('fuel', 'Топливо и АЗС'),
     ('pharmacies', 'Аптеки'), ('beauty_spa', 'Салоны красоты и SPA'), ('cosmetics', 'Косметика'),

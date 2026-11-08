@@ -1,10 +1,6 @@
 package com.djonique.cashbackadvbot.service;
 
-import com.djonique.cashbackadvbot.domain.AppUser;
-import com.djonique.cashbackadvbot.domain.Bank;
-import com.djonique.cashbackadvbot.domain.CashbackPercent;
-import com.djonique.cashbackadvbot.domain.Category;
-import com.djonique.cashbackadvbot.domain.UserBankSelection;
+import com.djonique.cashbackadvbot.domain.*;
 import com.djonique.cashbackadvbot.dto.ActiveSelectionDto;
 import com.djonique.cashbackadvbot.dto.BankCategoryKey;
 import com.djonique.cashbackadvbot.dto.SelectionInput;
@@ -86,10 +82,12 @@ public class SelectionService {
             return Map.of();
         }
 
-        return categoryIdsByBank.entrySet().stream()
-                .flatMap(entry -> bankCategoryRepository
-                        .findAllByBankIdAndCategoryIds(entry.getKey(), entry.getValue())
-                        .stream())
+        return bankCategoryRepository.findAllByBankIdIn(categoryIdsByBank.keySet()).stream()
+                .filter(bankCategory -> {
+                    Set<Long> categoryIds = categoryIdsByBank.get(bankCategory.getBank().getId());
+                    return categoryIds != null
+                            && categoryIds.contains(bankCategory.getCategory().getId());
+                })
                 .collect(Collectors.toMap(
                         bankCategory -> new BankCategoryKey(
                                 bankCategory.getBank().getId(),
@@ -108,6 +106,7 @@ public class SelectionService {
                 bank.getId(),
                 bank.getName(),
                 category.getId(),
+                category.getSlug(),
                 categoryName,
                 selection.getCashbackPercent());
     }

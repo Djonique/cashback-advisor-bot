@@ -6,8 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.Instant;
 
 @Entity
 @Table(name = "user_bank_selection")
@@ -38,6 +37,6 @@ public class UserBankSelection {
     @Column(name = "cashback_percent", nullable = false, precision = 5, scale = 2)
     private BigDecimal cashbackPercent;
 
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt = LocalDateTime.now(ZoneId.of("Europe/Moscow"));
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt = Instant.now();
 }

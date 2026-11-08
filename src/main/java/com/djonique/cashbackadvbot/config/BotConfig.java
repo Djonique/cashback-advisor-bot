@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import org.telegram.telegrambots.meta.generics.BotSession;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 
 @Configuration
@@ -27,7 +28,8 @@ public class BotConfig {
     public ApplicationRunner botRegistrationRunner(TelegramBotsApi botsApi, CashbackTelegramBot bot) {
         return args -> {
             try {
-                botsApi.registerBot(bot);
+                BotSession session = botsApi.registerBot(bot);
+                bot.bindSession(session);
                 log.info("Telegram-бот зарегистрирован: {}", bot.getBotUsername());
             } catch (TelegramApiException e) {
                 throw new IllegalStateException(

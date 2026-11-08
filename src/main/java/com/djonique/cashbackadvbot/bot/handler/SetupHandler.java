@@ -4,10 +4,10 @@ import com.djonique.cashbackadvbot.bot.BotSender;
 import com.djonique.cashbackadvbot.bot.CallbackData;
 import com.djonique.cashbackadvbot.bot.keyboard.KeyboardFactory;
 import com.djonique.cashbackadvbot.bot.state.DialogState;
-import com.djonique.cashbackadvbot.domain.AppUser;
-import com.djonique.cashbackadvbot.domain.Bank;
-import com.djonique.cashbackadvbot.domain.BankCategory;
+import com.djonique.cashbackadvbot.dto.BankCategoryDto;
+import com.djonique.cashbackadvbot.dto.BankDto;
 import com.djonique.cashbackadvbot.dto.SelectionContext;
+import com.djonique.cashbackadvbot.dto.UserRef;
 import com.djonique.cashbackadvbot.exception.ValidationException;
 import com.djonique.cashbackadvbot.service.BankCatalogService;
 import com.djonique.cashbackadvbot.service.UserStateService;
@@ -34,6 +34,7 @@ public class SetupHandler {
     private static final String CONTEXT_LOST_TEXT = "Контекст настройки потерян, начните заново";
     private static final String USER_ERROR_TEXT = "Не удалось определить пользователя";
     private static final String EDIT_ERROR_TEXT = "Не удалось обновить меню";
+    private static final String INVALID_BANK_TEXT = "Некорректный банк";
 
     private final CallbackSupport callbackSupport;
     private final UserStateService userStateService;
@@ -43,13 +44,13 @@ public class SetupHandler {
     private final SetupDialogHandler setupDialogHandler;
 
     public void handleSetup(CallbackQuery callbackQuery) {
-        AppUser user = callbackSupport.resolveUser(callbackQuery);
+        UserRef user = callbackSupport.resolveUser(callbackQuery);
         if (user == null) {
             botSender.answerCallback(callbackQuery.getId(), USER_ERROR_TEXT);
             return;
         }
-        List<Bank> banks = prepareBankSelection(user);
-        if (!callbackSupport.editText(callbackQuery, CHOOSE_BANK_TEXT,
+        List<BankDto> banks = prepareBankSelection(user);
+        if (!callbackSupport.editOrSend(callbackQuery, CHOOSE_BANK_TEXT,
                 keyboardFactory.getBankListKeyboard(banks))) {
             botSender.answerCallback(callbackQuery.getId(), EDIT_ERROR_TEXT);
             return;
@@ -57,40 +58,40 @@ public class SetupHandler {
         botSender.answerCallback(callbackQuery.getId(), null);
     }
 
-    public void openBankSelection(AppUser user, Long chatId) {
-        List<Bank> banks = prepareBankSelection(user);
+    public void openBankSelection(UserRef user, Long chatId) {
+        List<BankDto> banks = prepareBankSelection(user);
         botSender.send(chatId, CHOOSE_BANK_TEXT, keyboardFactory.getBankListKeyboard(banks));
     }
 
-    private List<Bank> prepareBankSelection(AppUser user) {
-        userStateService.setState(user, DialogState.CHOOSING_BANK, null);
-        List<Bank> banks = bankCatalogService.getBanksOrdered();
-        log.info("Настройка кешбэка: userId={}, доступно банков={}", user.getId(), banks.size());
+    private List<BankDto> prepareBankSelection(UserRef user) {
+        userStateService.setState(user.id(), DialogState.CHOOSING_BANK, null);
+        List<BankDto> banks = bankCatalogService.getBanksOrdered();
+        log.info("Настройка кешбэка: userId={}, доступно банков={}", user.id(), banks.size());
         return banks;
     }
 
     public void handleBankSelected(String data, CallbackQuery callbackQuery) {
         Long bankId = callbackSupport.parseId(data.substring(CallbackData.SETUP_BANK_PREFIX.length()));
-        AppUser user = callbackSupport.resolveUser(callbackQuery);
-        if (!callbackSupport.ensureState(user, callbackQuery, DialogState.CHOOSING_BANK)) {
+        UserRef user = callbackSupport.resolveUser(callbackQuery);
+        if (callbackSupport.ensureState(user, callbackQuery, DialogState.CHOOSING_BANK)) {
             return;
         }
-        if (bankId == null || !bankCatalogService.bankExists(bankId)) {
-            botSender.answerCallback(callbackQuery.getId(), "Некорректный банк");
+        if (bankCatalogService.isBankMissing(bankId)) {
+            botSender.answerCallback(callbackQuery.getId(), INVALID_BANK_TEXT);
             return;
         }
 
-        List<BankCategory> categories = bankCatalogService.getBankCategories(bankId);
+        List<BankCategoryDto> categories = bankCatalogService.getBankCategories(bankId);
         SelectionContext context = new SelectionContext(
                 bankId,
                 new LinkedHashSet<>(),
                 new HashMap<>(),
                 new ArrayList<>());
-        userStateService.setState(user, DialogState.CHOOSING_CATEGORIES, context);
+        userStateService.setState(user.id(), DialogState.CHOOSING_CATEGORIES, context);
 
         log.info("Выбран банк: bankId={}, userId={}, доступно категорий={}",
-                bankId, user.getId(), categories.size());
-        if (!callbackSupport.editText(callbackQuery, CHOOSE_CATEGORIES_TEXT,
+                bankId, user.id(), categories.size());
+        if (!callbackSupport.editOrSend(callbackQuery, CHOOSE_CATEGORIES_TEXT,
                 keyboardFactory.getCategoryKeyboard(categories, context.selectedCategoryIds()))) {
             botSender.answerCallback(callbackQuery.getId(), EDIT_ERROR_TEXT);
             return;
@@ -100,16 +101,16 @@ public class SetupHandler {
 
     public void handleCategoryToggle(String data, CallbackQuery callbackQuery) {
         Long categoryId = callbackSupport.parseId(data.substring(CallbackData.SETUP_TOGGLE_PREFIX.length()));
-        AppUser user = callbackSupport.resolveUser(callbackQuery);
-        if (!callbackSupport.ensureState(user, callbackQuery, DialogState.CHOOSING_CATEGORIES)) {
+        UserRef user = callbackSupport.resolveUser(callbackQuery);
+        if (callbackSupport.ensureState(user, callbackQuery, DialogState.CHOOSING_CATEGORIES)) {
             return;
         }
 
         SelectionContext context;
         try {
-            context = userStateService.getContext(user, SelectionContext.class).orElse(null);
+            context = userStateService.getContext(user.id(), SelectionContext.class).orElse(null);
         } catch (ValidationException e) {
-            userStateService.clearState(user);
+            userStateService.clearState(user.id());
             botSender.answerCallback(callbackQuery.getId(), CONTEXT_LOST_TEXT);
             return;
         }
@@ -127,38 +128,38 @@ public class SetupHandler {
         SelectionContext updatedContext;
         try {
             updatedContext = userStateService.updateContext(
-                    user,
+                    user.id(),
                     DialogState.CHOOSING_CATEGORIES,
                     SelectionContext.class,
                     current -> toggleCategory(current, categoryId));
         } catch (ValidationException e) {
-            log.warn("Контекст изменился при переключении категории: userId={}", user.getId());
-            userStateService.clearState(user);
+            log.warn("Контекст изменился при переключении категории: userId={}", user.id());
+            userStateService.clearState(user.id());
             botSender.answerCallback(callbackQuery.getId(), CONTEXT_LOST_TEXT);
             return;
         }
 
-        List<BankCategory> categories = bankCatalogService.getBankCategories(updatedContext.bankId());
+        List<BankCategoryDto> categories = bankCatalogService.getBankCategories(updatedContext.bankId());
         editCategoryKeyboard(callbackQuery, updatedContext, categories);
         botSender.answerCallback(callbackQuery.getId(), null);
     }
 
     public void handleDone(CallbackQuery callbackQuery) {
-        AppUser user = callbackSupport.resolveUser(callbackQuery);
-        if (!callbackSupport.ensureState(user, callbackQuery, DialogState.CHOOSING_CATEGORIES)) {
+        UserRef user = callbackSupport.resolveUser(callbackQuery);
+        if (callbackSupport.ensureState(user, callbackQuery, DialogState.CHOOSING_CATEGORIES)) {
             return;
         }
 
         SelectionContext context;
         try {
-            context = userStateService.getContext(user, SelectionContext.class).orElse(null);
+            context = userStateService.getContext(user.id(), SelectionContext.class).orElse(null);
         } catch (ValidationException e) {
-            userStateService.clearState(user);
+            userStateService.clearState(user.id());
             botSender.answerCallback(callbackQuery.getId(), CONTEXT_LOST_TEXT);
             return;
         }
         if (context == null || context.bankId() == null) {
-            userStateService.clearState(user);
+            userStateService.clearState(user.id());
             botSender.answerCallback(callbackQuery.getId(), CONTEXT_LOST_TEXT);
             return;
         }
@@ -187,7 +188,7 @@ public class SetupHandler {
 
     private void editCategoryKeyboard(CallbackQuery callbackQuery,
                                       SelectionContext context,
-                                      List<BankCategory> categories) {
+                                      List<BankCategoryDto> categories) {
         InlineKeyboardMarkup keyboard =
                 keyboardFactory.getCategoryKeyboard(categories, context.selectedCategoryIds());
         if (callbackSupport.editMarkup(callbackQuery, keyboard)) {

@@ -2,7 +2,7 @@ package com.djonique.cashbackadvbot.bot.handler;
 
 import com.djonique.cashbackadvbot.bot.BotSender;
 import com.djonique.cashbackadvbot.bot.state.DialogState;
-import com.djonique.cashbackadvbot.domain.AppUser;
+import com.djonique.cashbackadvbot.dto.UserRef;
 import com.djonique.cashbackadvbot.service.UserService;
 import com.djonique.cashbackadvbot.service.UserStateService;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +23,7 @@ public class CallbackSupport {
     private final UserStateService userStateService;
     private final BotSender botSender;
 
-    public AppUser resolveUser(CallbackQuery callbackQuery) {
+    public UserRef resolveUser(CallbackQuery callbackQuery) {
         Long chatId = getChatId(callbackQuery);
         if (chatId == null) {
             log.warn("Нет chatId в callback: id={}", callbackQuery.getId());
@@ -37,21 +37,24 @@ public class CallbackSupport {
 
     public Long getChatId(CallbackQuery callbackQuery) {
         MaybeInaccessibleMessage message = callbackQuery.getMessage();
-        return message != null ? message.getChatId() : null;
+        if (message != null) {
+            return message.getChatId();
+        }
+        return callbackQuery.getFrom() != null ? callbackQuery.getFrom().getId() : null;
     }
 
-    public boolean ensureState(AppUser user, CallbackQuery callbackQuery, DialogState... allowedStates) {
+    public boolean ensureState(UserRef user, CallbackQuery callbackQuery, DialogState... allowedStates) {
         if (user == null) {
             botSender.answerCallback(callbackQuery.getId(), "Не удалось определить пользователя");
-            return false;
+            return true;
         }
-        DialogState current = userStateService.getState(user);
+        DialogState current = userStateService.getState(user.id());
         if (!Set.of(allowedStates).contains(current)) {
-            log.debug("Callback вне ожидаемого состояния: userId={}, current={}", user.getId(), current);
+            log.debug("Callback вне ожидаемого состояния: userId={}, current={}", user.id(), current);
             botSender.answerCallback(callbackQuery.getId(), "Сессия устарела, начните заново");
-            return false;
+            return true;
         }
-        return true;
+        return false;
     }
 
     public Long parseId(String rawId) {
@@ -63,7 +66,12 @@ public class CallbackSupport {
         }
     }
 
-    public boolean editText(CallbackQuery callbackQuery, String text, InlineKeyboardMarkup keyboard) {
+    /**
+     * Редактирует сообщение, а при невозможности (старое/недоступное) отправляет новое.
+     *
+     * @return true, если сообщение удалось изменить или отправить
+     */
+    public boolean editOrSend(CallbackQuery callbackQuery, String text, InlineKeyboardMarkup keyboard) {
         MaybeInaccessibleMessage message = callbackQuery.getMessage();
         if (message == null) {
             Long chatId = getChatId(callbackQuery);

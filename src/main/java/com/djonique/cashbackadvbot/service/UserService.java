@@ -1,14 +1,15 @@
 package com.djonique.cashbackadvbot.service;
 
 import com.djonique.cashbackadvbot.domain.AppUser;
+import com.djonique.cashbackadvbot.dto.UserRef;
 import com.djonique.cashbackadvbot.repository.AppUserRepository;
+import com.djonique.cashbackadvbot.util.LogUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -16,19 +17,12 @@ import java.util.concurrent.ConcurrentHashMap;
 public class UserService {
 
     private final AppUserRepository appUserRepository;
-    private final ConcurrentHashMap<Long, AppUser> cache = new ConcurrentHashMap<>();
 
-    public AppUser findOrCreate(Long telegramChatId, String username) {
-        AppUser cached = cache.get(telegramChatId);
-        if (cached != null) {
-            return updateUsernameIfChanged(cached, username);
-        }
-
+    public UserRef findOrCreate(Long telegramChatId, String username) {
         AppUser user = appUserRepository.findByTelegramChatId(telegramChatId)
                 .map(existing -> updateUsernameIfChanged(existing, username))
                 .orElseGet(() -> createUser(telegramChatId, username));
-        cache.put(telegramChatId, user);
-        return user;
+        return new UserRef(user.getId(), user.getTelegramChatId());
     }
 
     private AppUser createUser(Long telegramChatId, String username) {
@@ -37,13 +31,16 @@ public class UserService {
         user.setUsername(username);
         try {
             AppUser saved = appUserRepository.save(user);
-            log.info("Создан новый пользователь: id={}, chatId={}", saved.getId(), telegramChatId);
+            log.info("Создан новый пользователь: id={}, chatId={}",
+                    saved.getId(), LogUtils.maskChatId(telegramChatId));
             return saved;
         } catch (DataIntegrityViolationException e) {
-            log.warn("Пользователь уже создан параллельным запросом: chatId={}", telegramChatId);
+            log.warn("Пользователь уже создан параллельным запросом: chatId={}",
+                    LogUtils.maskChatId(telegramChatId));
             return appUserRepository.findByTelegramChatId(telegramChatId)
                     .orElseThrow(() -> new IllegalStateException(
-                            "Не удалось создать или найти пользователя chatId=" + telegramChatId, e));
+                            "Не удалось создать или найти пользователя chatId="
+                                    + LogUtils.maskChatId(telegramChatId), e));
         }
     }
 
@@ -51,7 +48,6 @@ public class UserService {
         if (!Objects.equals(user.getUsername(), username)) {
             user.setUsername(username);
             AppUser saved = appUserRepository.save(user);
-            cache.put(saved.getTelegramChatId(), saved);
             log.info("Обновлён username пользователя: id={}", saved.getId());
             return saved;
         }

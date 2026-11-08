@@ -1,21 +1,20 @@
 package com.djonique.cashbackadvbot.service;
 
+import com.djonique.cashbackadvbot.bot.BotSender;
 import com.djonique.cashbackadvbot.bot.keyboard.KeyboardFactory;
 import com.djonique.cashbackadvbot.domain.AppUser;
 import com.djonique.cashbackadvbot.repository.AppUserRepository;
 import com.djonique.cashbackadvbot.repository.UserBankSelectionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.bots.AbsSender;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.time.YearMonth;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.time.format.TextStyle;
 import java.util.List;
 import java.util.Locale;
@@ -25,74 +24,74 @@ import java.util.Locale;
 @Slf4j
 public class MonthlyNotificationService {
 
-    private static final List<String> RUSSIAN_TIMEZONES = List.of(
-            "Europe/Kaliningrad",
-            "Europe/Moscow",
-            "Europe/Samara",
-            "Asia/Yekaterinburg",
-            "Asia/Omsk",
-            "Asia/Krasnoyarsk",
-            "Asia/Irkutsk",
-            "Asia/Yakutsk",
-            "Asia/Vladivostok",
-            "Asia/Magadan",
-            "Asia/Kamchatka");
-
-    private static final String NOTIFICATION_TEXT = "Выберите категории кэшбэка на %s";
+    private static final String NOTIFICATION_TEXT = "Выберите категории кешбэка на %s";
+    private static final ZoneId STORAGE_ZONE = ZoneId.of("Europe/Moscow");
+    private static final int PAGE_SIZE = 500;
+    private static final long RATE_LIMIT_DELAY_MS = 50L;
 
     private final AppUserRepository appUserRepository;
     private final UserBankSelectionRepository userBankSelectionRepository;
-    private final AbsSender absSender;
+    private final BotSender botSender;
     private final UserStateService userStateService;
     private final KeyboardFactory keyboardFactory;
 
     /**
-     * Запускается каждый час в 05 минут. Для каждой зоны РФ проверяет,
-     * наступило ли в ней 00:05 первого числа, и рассылает напоминание.
+     * Очистка старых выборов выполняется отдельно от рассылки и по московскому
+     * календарю — той же зоне, в которой сохраняются выборы пользователя.
      */
-    @Scheduled(cron = "0 5 * * * *")
-    @Transactional
+    @Scheduled(cron = "0 20 0 1 * *", zone = "Europe/Moscow")
+    public void deleteOldSelections() {
+        String currentMonth = YearMonth.now(STORAGE_ZONE).toString();
+        userBankSelectionRepository.deleteOldSelections(currentMonth);
+        log.info("Удалены выборы старше месяца: {}", currentMonth);
+    }
+
+    /**
+     * Рассылка в 00:05 первого числа по Москве — в той же зоне, в которой
+     * хранится year_month выборов пользователя.
+     */
+    @Scheduled(cron = "0 5 0 1 * *", zone = "Europe/Moscow")
     public void processNewMonth() {
-        for (String timezone : RUSSIAN_TIMEZONES) {
-            ZoneId zoneId = ZoneId.of(timezone);
-            ZonedDateTime now = ZonedDateTime.now(zoneId);
-            if (now.getDayOfMonth() != 1 || now.getHour() != 0) {
-                continue;
-            }
+        String monthName = YearMonth.now(STORAGE_ZONE)
+                .getMonth()
+                .getDisplayName(TextStyle.FULL_STANDALONE, Locale.of("ru"));
 
-            YearMonth currentMonth = YearMonth.now(zoneId);
-            userBankSelectionRepository.deleteOldSelections(currentMonth.toString());
-
-            List<AppUser> users = appUserRepository.findAllByTimezone(timezone);
+        int page = 0;
+        Page<AppUser> users;
+        do {
+            users = appUserRepository.findAll(
+                    PageRequest.of(page++, PAGE_SIZE, Sort.by("id")));
             if (users.isEmpty()) {
-                continue;
+                break;
             }
+            log.info("Новый месяц: month={}, страница={}, пользователей={}",
+                    YearMonth.now(STORAGE_ZONE), page, users.getNumberOfElements());
 
-            String monthName = now.getMonth()
-                    .getDisplayName(TextStyle.FULL_STANDALONE, Locale.of("ru"));
-            log.info("Новый месяц: timezone={}, month={}, пользователей={}",
-                    timezone, currentMonth, users.size());
+            List<Long> userIds = users.stream().map(AppUser::getId).toList();
+            userStateService.clearStates(userIds);
 
             for (AppUser user : users) {
-                userStateService.clearState(user);
                 sendNotification(user, monthName);
+                sleepBetweenMessages();
             }
-        }
+        } while (users.hasNext());
     }
 
     private void sendNotification(AppUser user, String monthName) {
-        SendMessage message = new SendMessage();
-        message.setChatId(user.getTelegramChatId());
-        message.setText(String.format(NOTIFICATION_TEXT, monthName));
-        message.setReplyMarkup(keyboardFactory.getMonthlyNotificationKeyboard());
+        String text = String.format(NOTIFICATION_TEXT, monthName);
+        if (botSender.send(user.getTelegramChatId(), text,
+                keyboardFactory.getMonthlyNotificationKeyboard())) {
+            log.info("Напоминание отправлено: userId={}", user.getId());
+        } else {
+            log.error("Не удалось отправить напоминание: userId={}", user.getId());
+        }
+    }
 
+    private void sleepBetweenMessages() {
         try {
-            absSender.execute(message);
-            log.info("Напоминание отправлено: userId={}, timezone={}",
-                    user.getId(), user.getTimezone());
-        } catch (TelegramApiException e) {
-            log.error("Не удалось отправить напоминание: userId={}, chatId={}",
-                    user.getId(), user.getTelegramChatId(), e);
+            Thread.sleep(RATE_LIMIT_DELAY_MS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 }

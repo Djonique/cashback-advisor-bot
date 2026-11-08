@@ -19,19 +19,20 @@ import java.util.List;
 @Slf4j
 public class HelpHandler {
 
-    private static final String HELP_MENU_TEXT =
-            "Выберите интересующий вас раздел:";
+    private static final String HELP_MENU_TEXT = "Выберите интересующий Вас раздел:";
+
     private static final String HELP_GENERAL_TEXT = """
             🤖 Как пользоваться ботом:
             
             1. Настройте категории в разделе «Настроить кешбэк».
-            2. Напишите боту название магазина, категорию или МСС-код, и он подскажет, какой картой выгоднее платить.
+            2. Напишите боту название магазина, категорию кешбэка или МСС-код, и он подскажет, какой картой выгоднее платить.
             
             ⚠️ Важно! Как точнее подобрать карту:
             
             1. По МСС-коду: вероятность ошибки минимальна.
-            2. Если кода нет — по категории: менее точно, вероятность ошибки выше.
+            2. Если кода нет — по категории кешбэка: менее точно, вероятность ошибки выше.
             3. По названию магазина — самый неточный вариант: зависит от настроек терминала в конкретном магазине.""";
+
     private static final String HELP_SETUP_TEXT = """
             ⚙️ Как настроить кешбэк:
             
@@ -42,6 +43,7 @@ public class HelpHandler {
             5. Нажмите «Готово».
             
             Настройки сохраняются на текущий календарный месяц.""";
+
     private static final String HELP_STORE_TEXT = """
             🏪 Как искать по магазину:
             
@@ -50,16 +52,19 @@ public class HelpHandler {
             Бот распознает текст независимо от варианта написания: «пятёрочка», «Пятерочка» или «PYATEROCHKA».
 
             ⚠️ Важно! Функция носит рекомендательный характер: итоговый МСС-код зависит от настроек терминала в конкретном магазине.""";
+
     private static final String HELP_CATEGORY_TEXT = """
             🗂 Как искать по категории:
             
-            Напишите боту название категории (например, «Супермаркеты», «Продукты» или «Кафе»). Бот найдет карты, в которых у вас настроен кешбэк на эту категорию.""";
+            Напишите боту название категории (например, «Супермаркеты», «Продукты» или «Кафе»). Бот найдет карту с максимальным кешбэком для этой категории.""";
+
     private static final String HELP_MCC_TEXT = """
             🔢 Как искать по МСС-коду:
             
             Введите 4 цифры МСС-кода (например, 5411). Бот найдет карту, где у вас настроен кешбэк на категорию, включающую этот код.
 
             Где можно узнать код? В приложении банка в деталях операции или на чеке.""";
+
     private static final String EDIT_ERROR_TEXT = "Не удалось обновить сообщение";
 
     private final BotSender botSender;
@@ -77,7 +82,7 @@ public class HelpHandler {
     public void handleHelp(CallbackQuery callbackQuery, String data) {
         switch (data) {
             case CallbackData.HELP_GENERAL ->
-                    editHelpMessage(callbackQuery, HELP_GENERAL_TEXT, backToHelpKeyboard(BotButtons.BACK));
+                    editHelpMessage(callbackQuery, HELP_GENERAL_TEXT, backToHelpKeyboard());
             case CallbackData.HELP_SETUP ->
                     editHelpMessage(callbackQuery, HELP_SETUP_TEXT, backToHelpKeyboard());
             case CallbackData.HELP_STORE ->
@@ -109,13 +114,9 @@ public class HelpHandler {
     }
 
     private InlineKeyboardMarkup backToHelpKeyboard() {
-        return backToHelpKeyboard(BotButtons.BACK);
-    }
-
-    private InlineKeyboardMarkup backToHelpKeyboard(String text) {
         return InlineKeyboardMarkup.builder()
                 .keyboardRow(List.of(InlineKeyboardButton.builder()
-                        .text("🔙 " + text)
+                        .text("🔙 " + BotButtons.BACK)
                         .callbackData(CallbackData.MENU_HELP)
                         .build()))
                 .build();

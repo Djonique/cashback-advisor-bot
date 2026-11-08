@@ -5,6 +5,7 @@ import com.djonique.cashbackadvbot.domain.AppUser;
 import com.djonique.cashbackadvbot.domain.UserState;
 import com.djonique.cashbackadvbot.dto.SelectionContext;
 import com.djonique.cashbackadvbot.repository.UserStateRepository;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -29,6 +30,9 @@ class UserStateServiceTest {
     private UserStateRepository userStateRepository;
 
     @Mock
+    private EntityManager entityManager;
+
+    @Mock
     private ObjectMapper objectMapper;
 
     @InjectMocks
@@ -36,42 +40,37 @@ class UserStateServiceTest {
 
     @Test
     void shouldReturnIdle_whenStateDoesNotExist() {
-        AppUser user = user(1L);
         when(userStateRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThat(userStateService.getState(user)).isEqualTo(DialogState.IDLE);
+        assertThat(userStateService.getState(1L)).isEqualTo(DialogState.IDLE);
     }
 
     @Test
     void shouldReturnIdle_whenStateIsUnknown() {
-        AppUser user = user(1L);
         UserState state = new UserState();
-        state.setUser(user);
         state.setState("UNKNOWN");
         when(userStateRepository.findById(1L)).thenReturn(Optional.of(state));
 
-        assertThat(userStateService.getState(user)).isEqualTo(DialogState.IDLE);
+        assertThat(userStateService.getState(1L)).isEqualTo(DialogState.IDLE);
     }
 
     @Test
     void shouldDeleteStateByUserId() {
-        userStateService.clearState(user(1L));
+        userStateService.clearState(1L);
 
         verify(userStateRepository).deleteByUserId(1L);
     }
 
     @Test
     void shouldUpdateContextInSingleTransaction() {
-        AppUser user = user(1L);
         UserState state = new UserState();
-        state.setUser(user);
         state.setState(DialogState.IDLE.name());
 
         when(userStateRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(state));
         when(objectMapper.writeValueAsString(any())).thenReturn("{\"bankId\":2}");
 
         SelectionContext result = userStateService.updateContext(
-                user,
+                1L,
                 DialogState.CHOOSING_BANK,
                 SelectionContext.class,
                 current -> new SelectionContext(2L, Set.of(10L), Map.of(), List.of()));
@@ -82,9 +81,16 @@ class UserStateServiceTest {
         verify(userStateRepository).save(state);
     }
 
-    private AppUser user(Long id) {
+    @Test
+    void shouldReferenceUser_whenStateIsCreated() {
         AppUser user = new AppUser();
-        user.setId(id);
-        return user;
+        user.setId(1L);
+        when(userStateRepository.findByIdForUpdate(1L)).thenReturn(Optional.empty());
+        when(entityManager.getReference(AppUser.class, 1L)).thenReturn(user);
+
+        userStateService.setState(1L, DialogState.CHOOSING_BANK, null);
+
+        verify(entityManager).getReference(AppUser.class, 1L);
+        verify(userStateRepository).save(any(UserState.class));
     }
 }

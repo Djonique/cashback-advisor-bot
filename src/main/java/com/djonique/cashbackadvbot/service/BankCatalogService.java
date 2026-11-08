@@ -1,8 +1,9 @@
 package com.djonique.cashbackadvbot.service;
 
 import com.djonique.cashbackadvbot.domain.Bank;
-import com.djonique.cashbackadvbot.domain.BankCategory;
 import com.djonique.cashbackadvbot.domain.Category;
+import com.djonique.cashbackadvbot.dto.BankCategoryDto;
+import com.djonique.cashbackadvbot.dto.BankDto;
 import com.djonique.cashbackadvbot.repository.BankCategoryRepository;
 import com.djonique.cashbackadvbot.repository.BankRepository;
 import com.djonique.cashbackadvbot.repository.CategoryRepository;
@@ -11,8 +12,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Справочники банков и категорий меняются только миграциями Flyway,
+ * поэтому кэшируем их в памяти до перезапуска приложения.
+ */
 @Service
 @RequiredArgsConstructor
 public class BankCatalogService {
@@ -21,19 +28,36 @@ public class BankCatalogService {
     private final BankCategoryRepository bankCategoryRepository;
     private final CategoryRepository categoryRepository;
 
+    private volatile List<BankDto> banksCache;
+    private final Map<Long, List<BankCategoryDto>> bankCategoriesCache = new ConcurrentHashMap<>();
+    private final Map<Long, Optional<String>> categoryNamesCache = new ConcurrentHashMap<>();
+
     @Transactional(readOnly = true)
-    public List<Bank> getBanksOrdered() {
-        return bankRepository.findAllByOrderByDisplayOrderAsc();
+    public List<BankDto> getBanksOrdered() {
+        List<BankDto> cached = banksCache;
+        if (cached == null) {
+            cached = bankRepository.findAllByOrderByDisplayOrderAsc().stream()
+                    .map(this::toBankDto)
+                    .toList();
+            banksCache = cached;
+        }
+        return cached;
     }
 
     @Transactional(readOnly = true)
-    public boolean bankExists(Long bankId) {
-        return bankId != null && bankRepository.existsById(bankId);
+    public boolean isBankMissing(Long bankId) {
+        return bankId == null || !bankRepository.existsById(bankId);
     }
 
     @Transactional(readOnly = true)
-    public List<BankCategory> getBankCategories(Long bankId) {
-        return bankCategoryRepository.findAllByBankId(bankId);
+    public List<BankCategoryDto> getBankCategories(Long bankId) {
+        return bankCategoriesCache.computeIfAbsent(bankId,
+                id -> bankCategoryRepository.findAllByBankId(id).stream()
+                        .map(bankCategory -> new BankCategoryDto(
+                                bankCategory.getCategory().getId(),
+                                bankCategory.getCategory().getSlug(),
+                                bankCategory.getDisplayName()))
+                        .toList());
     }
 
     @Transactional(readOnly = true)
@@ -44,6 +68,11 @@ public class BankCatalogService {
 
     @Transactional(readOnly = true)
     public Optional<String> findCategoryName(Long categoryId) {
-        return categoryRepository.findById(categoryId).map(Category::getName);
+        return categoryNamesCache.computeIfAbsent(categoryId,
+                id -> categoryRepository.findById(id).map(Category::getName));
+    }
+
+    private BankDto toBankDto(Bank bank) {
+        return new BankDto(bank.getId(), bank.getName());
     }
 }

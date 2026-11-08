@@ -22,20 +22,30 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
+  # Две задачи по расписанию не должны блокировать друг друга.
+  task:
+    scheduling:
+      pool:
+        size: 2
+      thread-name-prefix: scheduling-
+
 # Регистрацией бота управляет BotConfig, поэтому авто-конфигурация стартера отключена.
 telegrambots:
   enabled: false
 
 app:
-  github:
-    url: "https://github.com/djonique/cashback-advisor-bot"
-  support:
-    burger-url: "https://example.com/100"
-    server-url: "https://example.com/250"
-    deploy-url: "https://example.com/500"
+  referral:
+    tbank: "https://tbank-online.com/baf/1IFCQluGeyX"
+    alfa: "https://alfa.me/IZguQD"
+    vtb: "https://i.spbvtb.ru/bbct4b55"
+    ozon: "https://ozon.ru/fintech/promo/ref/EOYON8JQH"
+    yandex: "https://bank.yandex.ru/invite?refid=7U2phFHXdLi"
+    wb: "https://www.wildberries.ru/wb-bank/reference/k2BegFiT9UTW"
   telegram:
-    bot-token: ${TELEGRAM_BOT_TOKEN:}
+    bot-token: ${TELEGRAM_BOT_TOKEN}
     bot-username: ${TELEGRAM_BOT_USERNAME:CashbackAdvBot}
+    payments:
+      provider-token: ${TELEGRAM_PAYMENTS_TOKEN}
     # Отключите в тестах, чтобы не регистрировать бота в TelegramBotsApi.
     registration-enabled: true
 

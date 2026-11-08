@@ -96,6 +96,82 @@ class CashbackAdvisorServiceTest {
     }
 
     @Test
+    void shouldRecommendAllPurchases_whenMccIsNotExcluded() {
+        when(selectionService.getActiveSelections(1L))
+                .thenReturn(List.of(allPurchases(1L, "5")));
+        when(bankCategoryMccRepository.findByMccCode(MCC))
+                .thenReturn(List.of());
+        when(bankExcludedMccRepository.findBankIdsByMccCode(MCC))
+                .thenReturn(Set.of());
+
+        List<RecommendationDto> result = service.recommend(1L, MCC);
+
+        assertThat(result).singleElement()
+                .satisfies(recommendation -> {
+                    assertThat(recommendation.bankName()).isEqualTo("Bank1");
+                    assertThat(recommendation.categoryName()).isEqualTo("Все покупки");
+                    assertThat(recommendation.percent()).isEqualByComparingTo("5");
+                });
+    }
+
+    @Test
+    void shouldNotRecommendAllPurchases_whenMccExcludedForBank() {
+        when(selectionService.getActiveSelections(1L))
+                .thenReturn(List.of(allPurchases(1L, "5")));
+        when(bankCategoryMccRepository.findByMccCode(MCC))
+                .thenReturn(List.of());
+        when(bankExcludedMccRepository.findBankIdsByMccCode(MCC))
+                .thenReturn(Set.of(1L));
+
+        List<RecommendationDto> result = service.recommend(1L, MCC);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void shouldKeepAllPurchases_whenItsPercentIsHigherThanCategoryPercent() {
+        when(selectionService.getActiveSelections(1L))
+                .thenReturn(List.of(
+                        selection(1L, 10L, "3"),
+                        allPurchases(1L, "7")));
+        when(bankCategoryMccRepository.findByMccCode(MCC))
+                .thenReturn(List.of(mccRow(1L, 10L)));
+        when(bankExcludedMccRepository.findBankIdsByMccCode(MCC))
+                .thenReturn(Set.of());
+
+        List<RecommendationDto> result = service.recommend(1L, MCC);
+
+        assertThat(result).singleElement()
+                .satisfies(recommendation -> {
+                    assertThat(recommendation.categoryName()).isEqualTo("Все покупки");
+                    assertThat(recommendation.percent()).isEqualByComparingTo("7");
+                });
+    }
+
+    @Test
+    void shouldRecommendAllPurchases_whenStoreMccHasNoCategoryMapping() {
+        when(selectionService.getActiveSelections(1L))
+                .thenReturn(List.of(allPurchases(1L, "5")));
+        Store store = new Store();
+        store.setName("Пятёрочка");
+        store.setMccCode(MCC);
+        when(storeRepository.findByNameOrAliasContaining("пятёрочка"))
+                .thenReturn(List.of(store));
+        when(bankCategoryMccRepository.findByMccCodeIn(Set.of(MCC)))
+                .thenReturn(List.of());
+        when(bankExcludedMccRepository.findBankIdsByMccCodes(Set.of(MCC)))
+                .thenReturn(Set.of());
+
+        List<RecommendationDto> result = service.recommend(1L, "пятёрочка");
+
+        assertThat(result).singleElement()
+                .satisfies(recommendation -> {
+                    assertThat(recommendation.categoryName()).isEqualTo("Все покупки");
+                    assertThat(recommendation.percent()).isEqualByComparingTo("5");
+                });
+    }
+
+    @Test
     void shouldSortByPercentDescending_whenSearchingByCategory() {
         when(selectionService.getActiveSelections(1L))
                 .thenReturn(List.of(
@@ -113,6 +189,31 @@ class CashbackAdvisorServiceTest {
         assertThat(result)
                 .extracting(RecommendationDto::percent)
                 .containsExactly(new BigDecimal("10"), new BigDecimal("7"), new BigDecimal("3"));
+    }
+
+    @Test
+    void shouldKeepOnlyBestPercent_whenSameBankMatchesSeveralCategories() {
+        when(selectionService.getActiveSelections(1L))
+                .thenReturn(List.of(
+                        selection(1L, 10L, "3"),
+                        selection(1L, 20L, "7")));
+        Category first = new Category();
+        first.setId(10L);
+        first.setName("Category10");
+        Category second = new Category();
+        second.setId(20L);
+        second.setName("Category20");
+        when(categoryRepository.findByNameOrAliasContaining("category"))
+                .thenReturn(List.of(first, second));
+
+        List<RecommendationDto> result = service.recommend(1L, "category");
+
+        assertThat(result).singleElement()
+                .satisfies(recommendation -> {
+                    assertThat(recommendation.bankName()).isEqualTo("Bank1");
+                    assertThat(recommendation.categoryName()).isEqualTo("Category20");
+                    assertThat(recommendation.percent()).isEqualByComparingTo("7");
+                });
     }
 
     @Test
@@ -185,7 +286,18 @@ class CashbackAdvisorServiceTest {
                 bankId,
                 "Bank" + bankId,
                 categoryId,
+                "category" + categoryId,
                 "Category" + categoryId,
+                new BigDecimal(percent));
+    }
+
+    private ActiveSelectionDto allPurchases(Long bankId, String percent) {
+        return new ActiveSelectionDto(
+                bankId,
+                "Bank" + bankId,
+                100L,
+                "all_purchases",
+                "Все покупки",
                 new BigDecimal(percent));
     }
 

@@ -5,10 +5,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.Instant;
 
 @Entity
 @Table(name = "user_state")
@@ -37,11 +37,7 @@ public class UserState {
     @Column(name = "version", nullable = false)
     private Long version;
 
+    @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt = LocalDateTime.now(ZoneId.of("Europe/Moscow"));
-
-    @PreUpdate
-    void touchUpdatedAt() {
-        this.updatedAt = LocalDateTime.now(ZoneId.of("Europe/Moscow"));
-    }
+    private Instant updatedAt = Instant.now();
 }

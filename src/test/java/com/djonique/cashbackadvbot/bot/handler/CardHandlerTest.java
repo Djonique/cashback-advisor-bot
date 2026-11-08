@@ -3,8 +3,8 @@ package com.djonique.cashbackadvbot.bot.handler;
 import com.djonique.cashbackadvbot.bot.BotSender;
 import com.djonique.cashbackadvbot.bot.keyboard.KeyboardFactory;
 import com.djonique.cashbackadvbot.bot.state.DialogState;
-import com.djonique.cashbackadvbot.domain.AppUser;
 import com.djonique.cashbackadvbot.dto.RecommendationDto;
+import com.djonique.cashbackadvbot.dto.UserRef;
 import com.djonique.cashbackadvbot.service.CashbackAdvisorService;
 import com.djonique.cashbackadvbot.service.UserStateService;
 import org.junit.jupiter.api.Test;
@@ -45,30 +45,30 @@ class CardHandlerTest {
 
     @Test
     void shouldRejectInvalidMcc_withoutCallingAdvisor() {
-        AppUser user = user();
+        UserRef user = user();
 
         handler.handleInput(user, "12", DialogState.CARD_INPUT_MCC);
 
         verify(cashbackAdvisorService, never()).recommend(any(), anyString());
-        verify(botSender).send(eq(user.getTelegramChatId()),
+        verify(botSender).send(eq(user.telegramChatId()),
                 eq("Ошибка: MCC-код должен состоять из 4 цифр. Попробуйте еще раз."), any());
     }
 
     @Test
     void shouldClearStateAndReportNotFound_whenNoRecommendations() {
-        AppUser user = user();
+        UserRef user = user();
         when(cashbackAdvisorService.recommend(1L, "Пятёрочка")).thenReturn(List.of());
 
         handler.handleInput(user, "Пятёрочка", DialogState.CARD_INPUT_STORE);
 
-        verify(userStateService).clearState(user);
-        verify(botSender).send(eq(user.getTelegramChatId()),
+        verify(userStateService).clearState(1L);
+        verify(botSender).send(eq(user.telegramChatId()),
                 eq("Я не нашел карт с настроенным кешбэком, подходящих под Ваш запрос."), any());
     }
 
     @Test
     void shouldFormatRecommendations_withMedalsAndPercents() {
-        AppUser user = user();
+        UserRef user = user();
         when(cashbackAdvisorService.recommend(1L, "5411")).thenReturn(List.of(
                 new RecommendationDto("Bank1", "Супермаркеты", new BigDecimal("5.00")),
                 new RecommendationDto("Bank2", "Продукты", new BigDecimal("3"))));
@@ -82,10 +82,7 @@ class CardHandlerTest {
                 .contains("🥈 Bank2 — 3% (Продукты)");
     }
 
-    private AppUser user() {
-        AppUser user = new AppUser();
-        user.setId(1L);
-        user.setTelegramChatId(100L);
-        return user;
+    private UserRef user() {
+        return new UserRef(1L, 100L);
     }
 }

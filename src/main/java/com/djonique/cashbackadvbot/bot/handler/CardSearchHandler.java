@@ -3,7 +3,7 @@ package com.djonique.cashbackadvbot.bot.handler;
 import com.djonique.cashbackadvbot.bot.BotSender;
 import com.djonique.cashbackadvbot.bot.keyboard.KeyboardFactory;
 import com.djonique.cashbackadvbot.bot.state.DialogState;
-import com.djonique.cashbackadvbot.domain.AppUser;
+import com.djonique.cashbackadvbot.dto.UserRef;
 import com.djonique.cashbackadvbot.service.UserStateService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,14 +16,15 @@ import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 public class CardSearchHandler {
 
     private static final String CHOOSE_SEARCH_TEXT = "Выберите способ поиска:";
+    private static final String USER_ERROR_TEXT = "Не удалось определить пользователя";
+    private static final String EDIT_ERROR_TEXT = "Не удалось обновить меню";
+
+    private static final String ENTER_STORE_TEXT =
+            "Введите название магазина (например, Пятёрочка):";
     private static final String ENTER_CATEGORY_TEXT =
             "Введите название категории (например, Супермаркеты):";
     private static final String ENTER_MCC_TEXT =
             "Введите 4-значный MCC-код (например, 5411):";
-    private static final String ENTER_STORE_TEXT =
-            "Введите название магазина (например, Пятёрочка):";
-    private static final String USER_ERROR_TEXT = "Не удалось определить пользователя";
-    private static final String EDIT_ERROR_TEXT = "Не удалось обновить меню";
 
     private final CallbackSupport callbackSupport;
     private final UserStateService userStateService;
@@ -31,22 +32,26 @@ public class CardSearchHandler {
     private final BotSender botSender;
 
     public void handleChoose(CallbackQuery callbackQuery) {
-        AppUser user = callbackSupport.resolveUser(callbackQuery);
-        if (!callbackSupport.ensureState(user, callbackQuery, DialogState.IDLE)) {
+        UserRef user = callbackSupport.resolveUser(callbackQuery);
+        if (callbackSupport.ensureState(user, callbackQuery, DialogState.IDLE)) {
             return;
         }
-        userStateService.clearState(user);
+        userStateService.clearState(user.id());
         showSearchMenu(callbackQuery);
     }
 
     public void handleMenu(CallbackQuery callbackQuery) {
-        AppUser user = callbackSupport.resolveUser(callbackQuery);
+        UserRef user = callbackSupport.resolveUser(callbackQuery);
         if (user == null) {
             botSender.answerCallback(callbackQuery.getId(), USER_ERROR_TEXT);
             return;
         }
-        userStateService.clearState(user);
+        userStateService.clearState(user.id());
         showSearchMenu(callbackQuery);
+    }
+
+    public void handleCardByStore(CallbackQuery callbackQuery) {
+        openInput(callbackQuery, DialogState.CARD_INPUT_STORE, ENTER_STORE_TEXT);
     }
 
     public void handleCardByCategory(CallbackQuery callbackQuery) {
@@ -57,21 +62,18 @@ public class CardSearchHandler {
         openInput(callbackQuery, DialogState.CARD_INPUT_MCC, ENTER_MCC_TEXT);
     }
 
-    public void handleCardByStore(CallbackQuery callbackQuery) {
-        openInput(callbackQuery, DialogState.CARD_INPUT_STORE, ENTER_STORE_TEXT);
-    }
-
     private void openInput(CallbackQuery callbackQuery, DialogState state, String text) {
-        AppUser user = callbackSupport.resolveUser(callbackQuery);
-        if (!callbackSupport.ensureState(user, callbackQuery,
+        UserRef user = callbackSupport.resolveUser(callbackQuery);
+        if (callbackSupport.ensureState(user, callbackQuery,
                 DialogState.IDLE,
+                DialogState.CARD_INPUT_STORE,
                 DialogState.CARD_INPUT_CATEGORY,
-                DialogState.CARD_INPUT_MCC,
-                DialogState.CARD_INPUT_STORE)) {
+                DialogState.CARD_INPUT_MCC)) {
             return;
         }
-        userStateService.setState(user, state, null);
-        if (!callbackSupport.editText(callbackQuery, text, keyboardFactory.getBackToCardMenuKeyboard())) {
+        userStateService.setState(user.id(), state, null);
+        if (!callbackSupport.editOrSend(callbackQuery, text,
+                keyboardFactory.getBackToCardMenuKeyboard())) {
             botSender.answerCallback(callbackQuery.getId(), EDIT_ERROR_TEXT);
             return;
         }
@@ -79,7 +81,7 @@ public class CardSearchHandler {
     }
 
     private void showSearchMenu(CallbackQuery callbackQuery) {
-        if (!callbackSupport.editText(callbackQuery, CHOOSE_SEARCH_TEXT,
+        if (!callbackSupport.editOrSend(callbackQuery, CHOOSE_SEARCH_TEXT,
                 keyboardFactory.getCardSearchMenuKeyboard())) {
             botSender.answerCallback(callbackQuery.getId(), EDIT_ERROR_TEXT);
             return;
