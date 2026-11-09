@@ -585,4 +585,5 @@ INSERT INTO store (name, aliases, category_id, mcc_code) VALUES
 -- 37. ЭКОСИСТЕМА СБЕРА (MCC 3991)
 -- ============================================================
 ('Мегамаркет', 'мегамаркет, megamarket', (SELECT id FROM category WHERE slug = 'sber_ecosystem'), '3991'),
-('Самокат', 'самокат, samokat', (SELECT id FROM category WHERE slug = 'sber_ecosystem'), '3991');
+('Самокат', 'самокат, samokat', (SELECT id FROM category WHERE slug = 'sber_ecosystem'), '3991')
+ON CONFLICT (name) DO NOTHING;

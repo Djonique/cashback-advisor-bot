@@ -1,5 +1,6 @@
 package com.djonique.cashbackadvbot.service;
 
+import com.djonique.cashbackadvbot.bot.TelegramApiExecutor;
 import com.djonique.cashbackadvbot.config.PaymentProperties;
 import com.djonique.cashbackadvbot.domain.PaymentInvoice;
 import com.djonique.cashbackadvbot.repository.PaymentInvoiceRepository;
@@ -38,7 +39,8 @@ class PaymentServiceTest {
         paymentService = new PaymentService(
                 new PaymentProperties("live-provider-token"),
                 paymentRepository,
-                paymentInvoiceRepository);
+                paymentInvoiceRepository,
+                new TelegramApiExecutor());
     }
 
     @Test
@@ -131,6 +133,7 @@ class PaymentServiceTest {
         assertThat(paymentService.validatePreCheckout("payload-1", 9_999, "RUB", 123L)).isFalse();
         assertThat(paymentService.validatePreCheckout("payload-1", 10_000, "XTR", 123L)).isFalse();
         assertThat(paymentService.validatePreCheckout("payload-1", 10_000, "RUB", 999L)).isFalse();
+        assertThat(paymentService.validatePreCheckout("payload-1", 10_000, "RUB", null)).isFalse();
         assertThat(paymentService.validatePreCheckout("unknown", 10_000, "RUB", 123L)).isFalse();
     }
 

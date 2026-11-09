@@ -64,6 +64,7 @@ public class CashbackTelegramBot extends TelegramLongPollingBot {
     private final UserStateService userStateService;
     private final PaymentService paymentService;
     private final TelegramMessageSender messageSender;
+    private final TelegramApiExecutor telegramApiExecutor;
 
     private final ExecutorService workerPool;
     private final ExecutorService[] chatLanes;
@@ -78,7 +79,8 @@ public class CashbackTelegramBot extends TelegramLongPollingBot {
             UserService userService,
             UserStateService userStateService,
             PaymentService paymentService,
-            TelegramMessageSender messageSender) {
+            TelegramMessageSender messageSender,
+            TelegramApiExecutor telegramApiExecutor) {
         super(botProperties.getBotToken());
         this.botProperties = botProperties;
         this.menuHandler = menuHandler;
@@ -88,6 +90,7 @@ public class CashbackTelegramBot extends TelegramLongPollingBot {
         this.userStateService = userStateService;
         this.paymentService = paymentService;
         this.messageSender = messageSender;
+        this.telegramApiExecutor = telegramApiExecutor;
         this.messageSender.bind(this);
         this.workerPool = new ThreadPoolExecutor(
                 WORKER_THREADS,
@@ -131,6 +134,19 @@ public class CashbackTelegramBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
+        try {
+            dispatch(update);
+        } catch (Exception e) {
+            log.error("Не удалось обработать update id={}: {}",
+                    update.getUpdateId(), LogUtils.sanitize(e));
+            Long chatId = extractChatId(update);
+            if (chatId != null) {
+                messageSender.send(chatId, ERROR_TEXT, null);
+            }
+        }
+    }
+
+    private void dispatch(Update update) {
         if (update.hasPreCheckoutQuery()) {
             handlePreCheckout(update.getPreCheckoutQuery());
             return;
@@ -151,20 +167,33 @@ public class CashbackTelegramBot extends TelegramLongPollingBot {
         log.info("Получен PreCheckoutQuery: id={}, currency={}, totalAmount={}",
                 query.getId(), query.getCurrency(), query.getTotalAmount());
         Long payerChatId = query.getFrom() != null ? query.getFrom().getId() : null;
-        boolean valid = paymentService.validatePreCheckout(
-                query.getInvoicePayload(), query.getTotalAmount(), query.getCurrency(), payerChatId);
+        boolean valid;
         try {
-            if (valid) {
-                execute(new AnswerPreCheckoutQuery(query.getId(), true));
-            } else {
-                log.warn("Отклонён PreCheckoutQuery: id={}, currency={}, totalAmount={}",
-                        query.getId(), query.getCurrency(), query.getTotalAmount());
-                execute(new AnswerPreCheckoutQuery(query.getId(), false, "Некорректный платёж"));
-            }
-            log.info("Ответ на PreCheckoutQuery отправлен: id={}", query.getId());
+            valid = paymentService.validatePreCheckout(
+                    query.getInvoicePayload(), query.getTotalAmount(), query.getCurrency(), payerChatId);
+        } catch (RuntimeException e) {
+            log.error("Ошибка проверки PreCheckoutQuery: id={}: {}",
+                    query.getId(), LogUtils.sanitize(e));
+            answerPreCheckout(query.getId(), false, "Временная ошибка, попробуйте позже");
+            return;
+        }
+        if (valid) {
+            answerPreCheckout(query.getId(), true, null);
+        } else {
+            log.warn("Отклонён PreCheckoutQuery: id={}, currency={}, totalAmount={}",
+                    query.getId(), query.getCurrency(), query.getTotalAmount());
+            answerPreCheckout(query.getId(), false, "Некорректный платёж");
+        }
+    }
+
+    private void answerPreCheckout(String queryId, boolean ok, String errorMessage) {
+        try {
+            telegramApiExecutor.executeWithRetry(this,
+                    sender -> sender.execute(new AnswerPreCheckoutQuery(queryId, ok, errorMessage)));
+            log.info("Ответ на PreCheckoutQuery отправлен: id={}, ok={}", queryId, ok);
         } catch (TelegramApiException e) {
             log.error("Не удалось ответить на PreCheckoutQuery: id={}: {}",
-                    query.getId(), LogUtils.sanitize(e));
+                    queryId, LogUtils.sanitize(e));
         }
     }
 
@@ -193,7 +222,10 @@ public class CashbackTelegramBot extends TelegramLongPollingBot {
                 LogUtils.maskChatId(message.getChatId()),
                 payment.getTotalAmount(), payment.getCurrency());
 
-        UserRef user = userService.findOrCreate(message.getChatId(), username(message));
+        UserRef user = resolveUserWithRetry(message.getChatId(), username(message));
+        if (user == null) {
+            return;
+        }
         long totalAmount = payment.getTotalAmount() == null ? 0L : payment.getTotalAmount();
         boolean processed = persistPayment(user, payment, totalAmount);
         if (!processed) {
@@ -213,6 +245,25 @@ public class CashbackTelegramBot extends TelegramLongPollingBot {
             log.warn("Неизвестная валюта успешного платежа: chatId={}, currency={}",
                     LogUtils.maskChatId(message.getChatId()), payment.getCurrency());
         }
+    }
+
+    private UserRef resolveUserWithRetry(Long chatId, String username) {
+        for (int attempt = 1; attempt <= PAYMENT_RETRY_ATTEMPTS; attempt++) {
+            try {
+                return userService.findOrCreate(chatId, username);
+            } catch (RuntimeException e) {
+                log.error("Не удалось определить пользователя платежа (попытка {}/{}): chatId={}: {}",
+                        attempt, PAYMENT_RETRY_ATTEMPTS,
+                        LogUtils.maskChatId(chatId), LogUtils.sanitize(e));
+                if (attempt < PAYMENT_RETRY_ATTEMPTS) {
+                    sleepQuietly();
+                }
+            }
+        }
+        log.error("КРИТИЧНО: платёж не сохранён — не удалось определить пользователя: chatId={}",
+                LogUtils.maskChatId(chatId));
+        messageSender.send(chatId, PAYMENT_PENDING_TEXT, null);
+        return null;
     }
 
     private boolean persistPayment(UserRef user, SuccessfulPayment payment, long totalAmount) {

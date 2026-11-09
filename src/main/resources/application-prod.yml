@@ -4,6 +4,10 @@ spring:
     username: ${DB_USER}
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 30000
+      max-lifetime: 1800000
 
   jpa:
     open-in-view: false
@@ -18,4 +22,4 @@ spring:
 logging:
   level:
     root: INFO
-    com.djonique.cashbackadvbot: DEBUG
+    com.djonique.cashbackadvbot: INFO

@@ -1,5 +1,6 @@
 package com.djonique.cashbackadvbot.service;
 
+import com.djonique.cashbackadvbot.bot.TelegramApiExecutor;
 import com.djonique.cashbackadvbot.config.PaymentProperties;
 import com.djonique.cashbackadvbot.domain.PaymentInvoice;
 import com.djonique.cashbackadvbot.repository.PaymentInvoiceRepository;
@@ -32,6 +33,7 @@ public class PaymentService {
     private final PaymentProperties paymentProperties;
     private final PaymentRepository paymentRepository;
     private final PaymentInvoiceRepository paymentInvoiceRepository;
+    private final TelegramApiExecutor telegramApiExecutor;
 
     public boolean sendFiatInvoice(Long chatId, String title, int amountRub, AbsSender sender) {
         int amountMinor;
@@ -55,7 +57,7 @@ public class PaymentService {
 
         PaymentInvoice saved = createInvoice(chatId, payload, amountMinor, FIAT_CURRENCY);
         try {
-            sender.execute(invoice);
+            telegramApiExecutor.executeWithRetry(sender, s -> s.execute(invoice));
             log.info("Инвойс в рублях отправлен: chatId={}, amountRub={}",
                     LogUtils.maskChatId(chatId), amountRub);
             return true;
@@ -80,7 +82,7 @@ public class PaymentService {
 
         PaymentInvoice saved = createInvoice(chatId, payload, amountStars, STARS_CURRENCY);
         try {
-            sender.execute(invoice);
+            telegramApiExecutor.executeWithRetry(sender, s -> s.execute(invoice));
             log.info("Инвойс в звёздах отправлен: chatId={}, amountStars={}",
                     LogUtils.maskChatId(chatId), amountStars);
             return true;
@@ -107,8 +109,8 @@ public class PaymentService {
                 .filter(invoice -> PaymentInvoice.STATUS_CREATED.equals(invoice.getStatus()))
                 .filter(invoice -> invoice.getAmount() == totalAmount.longValue())
                 .filter(invoice -> currency.equals(invoice.getCurrency()))
-                .filter(invoice -> payerChatId == null
-                        || payerChatId.equals(invoice.getTelegramChatId()))
+                .filter(invoice -> payerChatId != null
+                        && payerChatId.equals(invoice.getTelegramChatId()))
                 .isPresent();
     }
 

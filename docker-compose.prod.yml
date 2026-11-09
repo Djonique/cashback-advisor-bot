@@ -1,3 +1,9 @@
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -15,10 +21,8 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
-    deploy:
-      resources:
-        limits:
-          memory: 512M
+    mem_limit: 512m
+    logging: *default-logging
 
   app:
     build:
@@ -34,11 +38,8 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: prod
       TZ: Europe/Moscow
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+    mem_limit: 768m
+    logging: *default-logging
 
 volumes:
   pgdata:
