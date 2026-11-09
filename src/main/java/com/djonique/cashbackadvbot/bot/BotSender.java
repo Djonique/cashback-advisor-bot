@@ -8,7 +8,7 @@ public interface BotSender {
 
     Integer sendWithMessageId(Long chatId, String text, InlineKeyboardMarkup keyboard);
 
-    boolean deleteMessage(Long chatId, Integer messageId);
+    void deleteMessage(Long chatId, Integer messageId);
 
     void answerCallback(String callbackQueryId, String text);
 

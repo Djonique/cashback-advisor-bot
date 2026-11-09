@@ -92,7 +92,7 @@ public class SelectionService {
                         bankCategory -> new BankCategoryKey(
                                 bankCategory.getBank().getId(),
                                 bankCategory.getCategory().getId()),
-                        bankCategory -> bankCategory.getDisplayName(),
+                        BankCategory::getDisplayName,
                         (first, second) -> first));
     }
 

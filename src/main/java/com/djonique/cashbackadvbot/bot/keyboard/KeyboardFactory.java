@@ -21,14 +21,13 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class KeyboardFactory {
 
-    private final BotProperties botProperties;
-
+    public static final String URL = "https://t.me/share/url?url=https://t.me/%s&text=%s";
     private static final String SHARE_TEXT =
             "Узнай, какой картой выгоднее оплатить покупку, и получай максимальный кешбэк!";
     private static final String ALL_PURCHASES_SLUG = "all_purchases";
     private static final Set<String> ALL_PURCHASES_NAMES =
             Set.of("Все покупки", "На все покупки", "На все", "На всё");
-    public static final String URL = "https://t.me/share/url?url=https://t.me/%s&text=%s";
+    private final BotProperties botProperties;
 
     public InlineKeyboardMarkup getMainMenuKeyboard() {
         return InlineKeyboardMarkup.builder()

@@ -50,7 +50,7 @@ public class HelpHandler {
             Просто напишите боту название магазина (например, «Пятёрочка», «Золотое Яблоко» или «DNS»). Бот сопоставит магазин с его МСС-кодом и найдет карту с максимальным кешбэком.
             
             Бот распознает текст независимо от варианта написания: «пятёрочка», «Пятерочка» или «PYATEROCHKA».
-
+            
             ⚠️ Важно! Функция носит рекомендательный характер: итоговый МСС-код зависит от настроек терминала в конкретном магазине.""";
 
     private static final String HELP_CATEGORY_TEXT = """
@@ -62,7 +62,7 @@ public class HelpHandler {
             🔢 Как искать по МСС-коду:
             
             Введите 4 цифры МСС-кода (например, 5411). Бот найдет карту, где у вас настроен кешбэк на категорию, включающую этот код.
-
+            
             Где можно узнать код? В приложении банка в деталях операции или на чеке.""";
 
     private static final String EDIT_ERROR_TEXT = "Не удалось обновить сообщение";
@@ -81,16 +81,11 @@ public class HelpHandler {
 
     public void handleHelp(CallbackQuery callbackQuery, String data) {
         switch (data) {
-            case CallbackData.HELP_GENERAL ->
-                    editHelpMessage(callbackQuery, HELP_GENERAL_TEXT, backToHelpKeyboard());
-            case CallbackData.HELP_SETUP ->
-                    editHelpMessage(callbackQuery, HELP_SETUP_TEXT, backToHelpKeyboard());
-            case CallbackData.HELP_STORE ->
-                    editHelpMessage(callbackQuery, HELP_STORE_TEXT, backToHelpKeyboard());
-            case CallbackData.HELP_CATEGORY ->
-                    editHelpMessage(callbackQuery, HELP_CATEGORY_TEXT, backToHelpKeyboard());
-            case CallbackData.HELP_MCC ->
-                    editHelpMessage(callbackQuery, HELP_MCC_TEXT, backToHelpKeyboard());
+            case CallbackData.HELP_GENERAL -> editHelpMessage(callbackQuery, HELP_GENERAL_TEXT, backToHelpKeyboard());
+            case CallbackData.HELP_SETUP -> editHelpMessage(callbackQuery, HELP_SETUP_TEXT, backToHelpKeyboard());
+            case CallbackData.HELP_STORE -> editHelpMessage(callbackQuery, HELP_STORE_TEXT, backToHelpKeyboard());
+            case CallbackData.HELP_CATEGORY -> editHelpMessage(callbackQuery, HELP_CATEGORY_TEXT, backToHelpKeyboard());
+            case CallbackData.HELP_MCC -> editHelpMessage(callbackQuery, HELP_MCC_TEXT, backToHelpKeyboard());
             default -> log.warn("Неизвестный help callback: {}", data);
         }
     }

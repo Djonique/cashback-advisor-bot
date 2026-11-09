@@ -42,14 +42,12 @@ public class TelegramMessageSender implements BotSender {
     }
 
     @Override
-    public boolean deleteMessage(Long chatId, Integer messageId) {
+    public void deleteMessage(Long chatId, Integer messageId) {
         try {
             executeWithRetry(() -> sender().execute(new DeleteMessage(chatId.toString(), messageId)));
-            return true;
         } catch (TelegramApiException e) {
             log.error("Не удалось удалить сообщение chatId={} id={}: {}",
                     LogUtils.maskChatId(chatId), messageId, LogUtils.sanitize(e));
-            return false;
         }
     }
 

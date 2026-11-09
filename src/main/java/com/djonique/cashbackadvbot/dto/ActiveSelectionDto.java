@@ -9,12 +9,4 @@ public record ActiveSelectionDto(
         String categorySlug,
         String categoryName,
         BigDecimal percent) {
-
-    public ActiveSelectionDto(Long bankId,
-                              String bankName,
-                              Long categoryId,
-                              String categoryName,
-                              BigDecimal percent) {
-        this(bankId, bankName, categoryId, null, categoryName, percent);
-    }
 }

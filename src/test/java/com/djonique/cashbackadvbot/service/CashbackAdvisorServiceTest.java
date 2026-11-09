@@ -1,10 +1,6 @@
 package com.djonique.cashbackadvbot.service;
 
-import com.djonique.cashbackadvbot.domain.Bank;
-import com.djonique.cashbackadvbot.domain.BankCategory;
-import com.djonique.cashbackadvbot.domain.BankCategoryMcc;
-import com.djonique.cashbackadvbot.domain.Category;
-import com.djonique.cashbackadvbot.domain.Store;
+import com.djonique.cashbackadvbot.domain.*;
 import com.djonique.cashbackadvbot.dto.ActiveSelectionDto;
 import com.djonique.cashbackadvbot.dto.RecommendationDto;
 import com.djonique.cashbackadvbot.repository.BankCategoryMccRepository;

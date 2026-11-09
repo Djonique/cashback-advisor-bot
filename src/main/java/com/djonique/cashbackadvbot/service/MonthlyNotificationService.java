@@ -35,7 +35,7 @@ public class MonthlyNotificationService {
     private final UserStateService userStateService;
     private final KeyboardFactory keyboardFactory;
 
-    /**
+    /*
      * Очистка старых выборов выполняется отдельно от рассылки и по московскому
      * календарю — той же зоне, в которой сохраняются выборы пользователя.
      */
@@ -46,7 +46,7 @@ public class MonthlyNotificationService {
         log.info("Удалены выборы старше месяца: {}", currentMonth);
     }
 
-    /**
+    /*
      * Рассылка в 00:05 первого числа по Москве — в той же зоне, в которой
      * хранится year_month выборов пользователя.
      */

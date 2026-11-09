@@ -54,7 +54,7 @@ public class UserStateService {
                 .map(json -> deserialize(userId, json, type));
     }
 
-    /**
+    /*
      * Атомарно читает и изменяет контекст в одной транзакции.
      * Благодаря этому @Version на user_state действительно защищает от потерянных обновлений.
      */

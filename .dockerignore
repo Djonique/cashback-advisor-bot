@@ -1,0 +1,11 @@
+.git
+.gitignore
+.idea
+.vscode
+.aiforopenide
+target
+.env
+.env.*
+!.env.example
+docker-compose*.yml
+*.md

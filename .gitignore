@@ -4,8 +4,14 @@ ARCHITECTURE.md
 CONVENTIONS.md
 DOMAIN.md
 TASKS.md
+DEPLOY.md
 target/
 .mvn/wrapper/maven-wrapper.jar
+
+### Environment ###
+.env
+.env.*
+!.env.example
 !**/src/main/**/target/
 !**/src/test/**/target/
 

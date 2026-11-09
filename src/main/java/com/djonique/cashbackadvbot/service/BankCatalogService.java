@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
+/*
  * Справочники банков и категорий меняются только миграциями Flyway,
  * поэтому кэшируем их в памяти до перезапуска приложения.
  */
@@ -27,10 +27,9 @@ public class BankCatalogService {
     private final BankRepository bankRepository;
     private final BankCategoryRepository bankCategoryRepository;
     private final CategoryRepository categoryRepository;
-
-    private volatile List<BankDto> banksCache;
     private final Map<Long, List<BankCategoryDto>> bankCategoriesCache = new ConcurrentHashMap<>();
     private final Map<Long, Optional<String>> categoryNamesCache = new ConcurrentHashMap<>();
+    private volatile List<BankDto> banksCache;
 
     @Transactional(readOnly = true)
     public List<BankDto> getBanksOrdered() {

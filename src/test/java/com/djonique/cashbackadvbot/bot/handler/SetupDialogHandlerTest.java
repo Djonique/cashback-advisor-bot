@@ -3,8 +3,8 @@ package com.djonique.cashbackadvbot.bot.handler;
 import com.djonique.cashbackadvbot.bot.BotSender;
 import com.djonique.cashbackadvbot.bot.keyboard.KeyboardFactory;
 import com.djonique.cashbackadvbot.bot.state.DialogState;
-import com.djonique.cashbackadvbot.dto.UserRef;
 import com.djonique.cashbackadvbot.dto.SelectionContext;
+import com.djonique.cashbackadvbot.dto.UserRef;
 import com.djonique.cashbackadvbot.service.BankCatalogService;
 import com.djonique.cashbackadvbot.service.SelectionService;
 import com.djonique.cashbackadvbot.service.UserStateService;
@@ -21,13 +21,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.UnaryOperator;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class SetupDialogHandlerTest {

@@ -2,7 +2,7 @@ package com.djonique.cashbackadvbot.util;
 
 import java.util.regex.Pattern;
 
-/**
+/*
  * Утилиты для безопасного логирования: маскирование chat_id и токенов Telegram.
  */
 public final class LogUtils {

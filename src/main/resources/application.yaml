@@ -6,7 +6,7 @@ spring:
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/cashback}
     username: ${DB_USERNAME:cashback}
-    password: ${DB_PASSWORD:cashback}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   # JPA / Hibernate

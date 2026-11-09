@@ -5,7 +5,7 @@ import java.math.RoundingMode;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
-/**
+/*
  * Разбор и валидация процента кешбэка, который вводит пользователь.
  * Ограничиваем формат до BigDecimal, чтобы исключить огромные экспоненты.
  */

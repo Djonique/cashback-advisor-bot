@@ -23,11 +23,7 @@ import org.telegram.telegrambots.meta.api.objects.payments.SuccessfulPayment;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.BotSession;
 
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.stream.IntStream;
 
 @Component
@@ -318,7 +314,7 @@ public class CashbackTelegramBot extends TelegramLongPollingBot {
             return false;
         }
         String chatType = message.getChat().getType();
-        if (chatType == null || PRIVATE_CHAT_TYPE.equals(chatType)) {
+        if (PRIVATE_CHAT_TYPE.equals(chatType)) {
             return false;
         }
         log.warn("Отклонено сообщение из неподдерживаемого чата: chatId={}, type={}",

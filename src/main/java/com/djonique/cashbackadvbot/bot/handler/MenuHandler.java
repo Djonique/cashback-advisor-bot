@@ -59,18 +59,6 @@ public class MenuHandler {
     private final ObjectProvider<AbsSender> absSenderProvider;
     private final ReferralProperties referralProperties;
 
-    public void handleStart(Long chatId, String username) {
-        UserRef user = userService.findOrCreate(chatId, username);
-        clearStateAndDeletePrompt(user, chatId);
-        sendStart(chatId, user);
-    }
-
-    public void handleMenu(Long chatId, String username) {
-        UserRef user = userService.findOrCreate(chatId, username);
-        clearStateAndDeletePrompt(user, chatId);
-        sendMenu(chatId, user);
-    }
-
     public void handleCommand(String command, Long chatId, String username) {
         UserRef user = userService.findOrCreate(chatId, username);
         clearStateAndDeletePrompt(user, chatId);
@@ -115,8 +103,7 @@ public class MenuHandler {
             case CallbackData.SUPPORT_CUSTOM -> handleCustomDonation(callbackQuery);
             case CallbackData.MENU_HELP -> helpHandler.handleMenu(callbackQuery);
             case CallbackData.HELP_GENERAL, CallbackData.HELP_SETUP, CallbackData.HELP_STORE,
-                 CallbackData.HELP_CATEGORY, CallbackData.HELP_MCC ->
-                    helpHandler.handleHelp(callbackQuery, data);
+                 CallbackData.HELP_CATEGORY, CallbackData.HELP_MCC -> helpHandler.handleHelp(callbackQuery, data);
             default -> handlePrefixedCallback(data, callbackQuery);
         }
     }
@@ -297,9 +284,9 @@ public class MenuHandler {
         userStateService.clearState(user.id());
     }
 
-    private boolean deleteDonationPrompt(UserRef user, Long chatId) {
+    private void deleteDonationPrompt(UserRef user, Long chatId) {
         if (userStateService.getState(user.id()) != DialogState.ENTERING_DONATION_AMOUNT) {
-            return false;
+            return;
         }
 
         try {
@@ -309,7 +296,6 @@ public class MenuHandler {
         } catch (ValidationException e) {
             log.warn("Не удалось прочитать контекст доната: userId={}", user.id());
         }
-        return true;
     }
 
     private void editToMainMenu(CallbackQuery callbackQuery) {

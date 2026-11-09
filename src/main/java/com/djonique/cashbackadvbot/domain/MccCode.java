@@ -2,7 +2,7 @@ package com.djonique.cashbackadvbot.domain;
 
 import java.util.regex.Pattern;
 
-/**
+/*
  * MCC-код — всегда строка из четырёх цифр с ведущими нулями.
  */
 public final class MccCode {
