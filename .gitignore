@@ -3,7 +3,6 @@ AGENTS.md
 ARCHITECTURE.md
 CONVENTIONS.md
 DOMAIN.md
-TASKS.md
 DEPLOY.md
 target/
 .mvn/wrapper/maven-wrapper.jar
