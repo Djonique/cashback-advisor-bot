@@ -13,8 +13,10 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.text.Collator;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 @Component
@@ -67,8 +69,13 @@ public class KeyboardFactory {
 
     public InlineKeyboardMarkup getCategoryKeyboard(List<BankCategoryDto> categories, Set<Long> selectedIds) {
         InlineKeyboardMarkup.InlineKeyboardMarkupBuilder builder = InlineKeyboardMarkup.builder();
+        Collator collator = Collator.getInstance(Locale.of("ru", "RU"));
+        // «Все покупки» всегда первой, остальные — по алфавиту локальных названий.
+        Comparator<BankCategoryDto> order = Comparator
+                .comparing((BankCategoryDto bankCategory) -> !isAllPurchases(bankCategory))
+                .thenComparing(BankCategoryDto::displayName, collator);
         categories.stream()
-                .sorted(Comparator.comparing(bankCategory -> !isAllPurchases(bankCategory)))
+                .sorted(order)
                 .forEach(bankCategory -> {
                     Long categoryId = bankCategory.id();
                     boolean selected = selectedIds != null && selectedIds.contains(categoryId);

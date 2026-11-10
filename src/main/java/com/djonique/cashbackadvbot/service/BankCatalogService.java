@@ -1,12 +1,10 @@
 package com.djonique.cashbackadvbot.service;
 
 import com.djonique.cashbackadvbot.domain.Bank;
-import com.djonique.cashbackadvbot.domain.Category;
 import com.djonique.cashbackadvbot.dto.BankCategoryDto;
 import com.djonique.cashbackadvbot.dto.BankDto;
 import com.djonique.cashbackadvbot.repository.BankCategoryRepository;
 import com.djonique.cashbackadvbot.repository.BankRepository;
-import com.djonique.cashbackadvbot.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,9 +24,7 @@ public class BankCatalogService {
 
     private final BankRepository bankRepository;
     private final BankCategoryRepository bankCategoryRepository;
-    private final CategoryRepository categoryRepository;
     private final Map<Long, List<BankCategoryDto>> bankCategoriesCache = new ConcurrentHashMap<>();
-    private final Map<Long, Optional<String>> categoryNamesCache = new ConcurrentHashMap<>();
     private volatile List<BankDto> banksCache;
 
     @Transactional(readOnly = true)
@@ -65,10 +61,19 @@ public class BankCatalogService {
                 && bankCategoryRepository.existsByBank_IdAndCategory_Id(bankId, categoryId);
     }
 
+    /*
+     * Локальное название категории у конкретного банка.
+     * getDisplayName() возвращает local_name, а при его отсутствии — глобальное имя категории.
+     */
     @Transactional(readOnly = true)
-    public Optional<String> findCategoryName(Long categoryId) {
-        return categoryNamesCache.computeIfAbsent(categoryId,
-                id -> categoryRepository.findById(id).map(Category::getName));
+    public Optional<String> findLocalCategoryName(Long bankId, Long categoryId) {
+        if (bankId == null || categoryId == null) {
+            return Optional.empty();
+        }
+        return getBankCategories(bankId).stream()
+                .filter(bankCategory -> categoryId.equals(bankCategory.id()))
+                .map(BankCategoryDto::displayName)
+                .findFirst();
     }
 
     private BankDto toBankDto(Bank bank) {

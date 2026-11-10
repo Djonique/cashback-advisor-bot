@@ -94,7 +94,7 @@ public class PaymentService {
         }
     }
 
-    /**
+    /*
      * Проверяет PreCheckoutQuery по сохранённому счёту: payload, сумма, валюта и плательщик.
      */
     @Transactional(readOnly = true)
@@ -114,7 +114,7 @@ public class PaymentService {
                 .isPresent();
     }
 
-    /**
+    /*
      * Атомарно сохраняет платёж. Возвращает false, если платёж с таким
      * telegram_payment_charge_id уже был обработан (повторная доставка update).
      */

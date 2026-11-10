@@ -51,6 +51,17 @@ class CardHandlerTest {
     }
 
     @Test
+    void shouldRejectDigitsOfWrongLength_inAnyState() {
+        UserRef user = user();
+
+        handler.handleInput(user, "12345", DialogState.CARD_INPUT_STORE);
+
+        verify(cashbackAdvisorService, never()).recommend(any(), anyString());
+        verify(botSender).send(eq(user.telegramChatId()),
+                eq("Ошибка: MCC-код должен состоять из 4 цифр. Попробуйте еще раз."), any());
+    }
+
+    @Test
     void shouldClearStateAndReportNotFound_whenNoRecommendations() {
         UserRef user = user();
         when(cashbackAdvisorService.recommend(1L, "Пятёрочка")).thenReturn(List.of());

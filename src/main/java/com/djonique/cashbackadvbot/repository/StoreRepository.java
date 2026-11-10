@@ -12,11 +12,17 @@ import java.util.List;
 @Repository
 public interface StoreRepository extends JpaRepository<Store, Long> {
 
+    /*
+     * Точное совпадение без учёта регистра:
+     * - по названию магазина целиком;
+     * - по одному из алиасов целиком (алиасы хранятся строкой через запятую).
+     * Пробелы убираются с обеих сторон, чтобы «папа джонс» совпал с алиасом «папа джонс».
+     */
     @EntityGraph(attributePaths = {"category"})
-    @Query("""
-            SELECT s FROM Store s
-            WHERE LOWER(s.name) LIKE LOWER(CONCAT('%', :text, '%')) ESCAPE '!'
-               OR LOWER(s.aliases) LIKE LOWER(CONCAT('%', :text, '%')) ESCAPE '!'
-            """)
-    List<Store> findByNameOrAliasContaining(@Param("text") String text);
+    @Query(value = """
+            SELECT s.* FROM store s
+            WHERE LOWER(s.name) = LOWER(:text)
+               OR LOWER(',' || REPLACE(s.aliases, ' ', '') || ',') LIKE LOWER('%,' || REPLACE(:text, ' ', '') || ',%')
+            """, nativeQuery = true)
+    List<Store> findByNameOrAlias(@Param("text") String text);
 }

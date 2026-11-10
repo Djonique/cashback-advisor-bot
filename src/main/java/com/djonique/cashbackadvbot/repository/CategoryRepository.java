@@ -11,11 +11,15 @@ import java.util.List;
 @Repository
 public interface CategoryRepository extends JpaRepository<Category, Long> {
 
-    @Query("""
-            SELECT DISTINCT c FROM Category c
-            LEFT JOIN c.aliases a
-            WHERE LOWER(c.name) LIKE LOWER(CONCAT('%', :text, '%')) ESCAPE '!'
-               OR LOWER(a.alias) LIKE LOWER(CONCAT('%', :text, '%')) ESCAPE '!'
-            """)
-    List<Category> findByNameOrAliasContaining(@Param("text") String text);
+    /*
+     * Точное совпадение без учёта регистра: с названием категории целиком
+     * или с одним из её алиасов целиком.
+     */
+    @Query(value = """
+            SELECT DISTINCT c.* FROM category c
+            LEFT JOIN category_alias ca ON c.id = ca.category_id
+            WHERE LOWER(c.name) = LOWER(:text) 
+               OR LOWER(ca.alias) = LOWER(:text)
+            """, nativeQuery = true)
+    List<Category> findByNameOrAlias(@Param("text") String text);
 }

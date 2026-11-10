@@ -12,21 +12,21 @@ ON CONFLICT (slug) DO NOTHING;
 INSERT INTO bank_category (bank_id, category_id, local_name)
 SELECT b.id, c.id, v.local_name FROM (
     VALUES
-    ('all_purchases', 'Все покупки'), ('restaurants', 'Кафе, рестораны и бары'), ('fastfood', 'Фастфуд'), ('education', 'Образование'),
+    ('all_purchases', 'Все покупки'), ('restaurants', 'Кафе, бары и рестораны'), ('fastfood', 'Фастфуд'), ('education', 'Образование'),
     ('clothes_shoes', 'Одежда и обувь'), ('entertainment', 'Развлечения и Кино'), ('transport', 'Городской транспорт'),
     ('flowers', 'Цветы'), ('pharmacies', 'Аптеки'), ('home_repair', 'Товары для дома'),
     ('beauty_spa', 'Красота'), ('cosmetics', 'Парфюмерия и косметика'), ('fitness', 'Спорт и фитнес'),
     ('sport_goods', 'Спорт и фитнес'), ('medical_clinics', 'Медицина'), ('supermarkets', 'Супермаркеты'),
     ('auto_services', 'Автоуслуги'), ('vet_pets', 'Питомцы'), ('books', 'Книги'),
     ('electronics', 'Электроника и бытовая техника'), ('jewelry', 'Ювелирные изделия'),
-    ('kids_goods', 'Товары для детей'), ('fuel', 'АЗС')
+    ('kids_goods', 'Товары для детей'), ('fuel', 'АЗС'), ('taxi', 'Яндекс Такси')
 ) AS v(category_slug, local_name)
 JOIN bank b ON b.slug = 'yandex'
 JOIN category c ON c.slug = v.category_slug
 ON CONFLICT (bank_id, category_id) DO NOTHING;
 
 -- 3. Загружаем MCC-коды по категориям
--- Кафе, рестораны и бары
+-- Кафе, бары и рестораны
 INSERT INTO bank_category_mcc (bank_category_id, mcc_code)
 SELECT bc.id, v.mcc FROM bank_category bc
 JOIN bank b ON b.id = bc.bank_id AND b.slug = 'yandex'
@@ -207,6 +207,15 @@ SELECT bc.id, v.mcc FROM bank_category bc
 JOIN bank b ON b.id = bc.bank_id AND b.slug = 'yandex'
 JOIN category c ON c.id = bc.category_id AND c.slug = 'fuel'
 CROSS JOIN (VALUES ('5541'),('5172'),('5542'),('5552'),('5983'),('9752')) AS v(mcc)
+ON CONFLICT DO NOTHING;
+
+-- Такси
+-- 4121 НЕ добавлять: категория «Такси» в Яндекс Банке работает только
+-- для Яндекс Такси (MCC 3990). Обычные агрегаторы с 4121 сюда не входят.
+INSERT INTO bank_category_mcc (bank_category_id, mcc_code)
+SELECT bc.id, '3990' FROM bank_category bc
+JOIN bank b ON b.id = bc.bank_id AND b.slug = 'yandex'
+JOIN category c ON c.id = bc.category_id AND c.slug = 'taxi'
 ON CONFLICT DO NOTHING;
 
 -- 4. Исключения (Огромный список из Приложения 1)

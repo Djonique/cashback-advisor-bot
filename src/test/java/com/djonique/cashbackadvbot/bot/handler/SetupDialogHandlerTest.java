@@ -18,6 +18,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.UnaryOperator;
 
@@ -44,6 +45,23 @@ class SetupDialogHandlerTest {
 
     @InjectMocks
     private SetupDialogHandler handler;
+
+    @Test
+    void shouldAskPercentWithLocalCategoryName() {
+        UserRef user = user();
+        SelectionContext context = new SelectionContext(
+                1L,
+                Set.of(10L),
+                Map.of(),
+                List.of(10L));
+        when(bankCatalogService.findLocalCategoryName(1L, 10L)).thenReturn(Optional.of("Продукты"));
+
+        handler.startPercentInput(user, context);
+
+        verify(botSender).send(eq(user.telegramChatId()),
+                eq("Введите процент кешбэка для категории «Продукты» (например, 5 или 7.5):"),
+                isNull());
+    }
 
     @Test
     void shouldNotSave_whenSomeSelectedCategoriesHaveNoPercent() {

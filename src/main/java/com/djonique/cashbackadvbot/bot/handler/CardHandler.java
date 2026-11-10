@@ -24,7 +24,7 @@ public class CardHandler {
     private static final String INVALID_MCC_TEXT =
             "Ошибка: MCC-код должен состоять из 4 цифр. Попробуйте еще раз.";
     private static final String NOT_FOUND_TEXT =
-            "Я не нашел карт с настроенным кешбэком, подходящих под Ваш запрос.";
+            "Я не нашел карт, подходящих под Ваш запрос.";
     private static final String[] MEDALS = {"🥇", "🥈", "🥉"};
     private static final int MAX_MESSAGE_LENGTH = 4000;
     private static final int MAX_INPUT_DISPLAY_LENGTH = 100;
@@ -36,7 +36,8 @@ public class CardHandler {
 
     public void handleInput(UserRef user, String input, DialogState state) {
         String trimmedInput = input == null ? "" : input.trim();
-        if (state == DialogState.CARD_INPUT_MCC && !MccCode.isValid(trimmedInput)) {
+        // Набор из одних цифр — это попытка ввести MCC, а не магазин или категория.
+        if (trimmedInput.matches("\\d+") && !MccCode.isValid(trimmedInput)) {
             botSender.send(user.telegramChatId(), INVALID_MCC_TEXT,
                     keyboardFactory.getBackToMainKeyboard());
             return;

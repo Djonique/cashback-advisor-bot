@@ -42,10 +42,10 @@ public class CashbackAdvisorService {
             return List.of();
         }
 
-        String trimmedInput = input.trim();
-        List<ActiveSelectionDto> matched = MccCode.isValid(trimmedInput)
-                ? matchByMccCode(trimmedInput, selections)
-                : matchByText(trimmedInput, selections);
+        SearchTarget target = resolveTarget(input.trim());
+        List<ActiveSelectionDto> matched = selections.stream()
+                .filter(selection -> matches(selection, target))
+                .toList();
 
         log.debug("Совпадений: {}, userId={}", matched.size(), userId);
 
@@ -66,6 +66,76 @@ public class CashbackAdvisorService {
                 .toList();
     }
 
+    /*
+     * Цель поиска:
+     * - MCC: пары банк↔категория из bank_category_mcc (MCC может относиться к нескольким категориям);
+     * - магазин: те же пары, но дополнительно сужены категорией магазина (store.category_id),
+     *   чтобы развести общий MCC экосистемы (например, 3990 у Яндекса);
+     * - текст категории: набор categoryId, общий для всех банков.
+     */
+    private SearchTarget resolveTarget(String input) {
+        if (MccCode.isValid(input)) {
+            return targetByMccCodes(Set.of(input), Set.of());
+        }
+
+        List<Store> stores = storeRepository.findByNameOrAlias(escapeLike(input));
+        if (!stores.isEmpty()) {
+            Set<String> mccCodes = stores.stream()
+                    .map(Store::getMccCode)
+                    .filter(mccCode -> mccCode != null && !mccCode.isBlank())
+                    .map(String::trim)
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
+            Set<Long> storeCategoryIds = stores.stream()
+                    .map(Store::getCategory)
+                    .filter(Objects::nonNull)
+                    .map(Category::getId)
+                    .collect(Collectors.toSet());
+            return targetByMccCodes(mccCodes, storeCategoryIds);
+        }
+
+        Set<Long> categoryIds = categoryRepository.findByNameOrAlias(escapeLike(input)).stream()
+                .map(Category::getId)
+                .collect(Collectors.toSet());
+        return new SearchTarget(categoryIds, Set.of(), false, Set.of());
+    }
+
+    private SearchTarget targetByMccCodes(Set<String> mccCodes, Set<Long> categoryFilter) {
+        if (mccCodes.isEmpty()) {
+            return new SearchTarget(Set.of(), Set.of(), true, Set.of());
+        }
+
+        Set<Long> excludedBankIds = bankExcludedMccRepository.findBankIdsByMccCodes(mccCodes);
+        Set<BankCategoryKey> allowedPairs = bankCategoryMccRepository.findByMccCodeIn(mccCodes).stream()
+                .filter(mcc -> !excludedBankIds.contains(mcc.getBankCategory().getBank().getId()))
+                .filter(mcc -> categoryFilter.isEmpty()
+                        || categoryFilter.contains(mcc.getBankCategory().getCategory().getId()))
+                .map(mcc -> new BankCategoryKey(
+                        mcc.getBankCategory().getBank().getId(),
+                        mcc.getBankCategory().getCategory().getId()))
+                .collect(Collectors.toSet());
+        return new SearchTarget(Set.of(), allowedPairs, true, excludedBankIds);
+    }
+
+    private boolean matches(ActiveSelectionDto selection, SearchTarget target) {
+        if (target.allowedPairs().contains(new BankCategoryKey(selection.bankId(), selection.categoryId()))
+                || target.categoryIds().contains(selection.categoryId())) {
+            return true;
+        }
+        if (!isAllPurchases(selection)) {
+            return false;
+        }
+        if (target.mccKnown()) {
+            // Для MCC/магазина «Все покупки» подходит, если банк не исключил этот MCC.
+            return !target.excludedBankIds().contains(selection.bankId());
+        }
+        /*
+         * Для текстового запроса точный MCC неизвестен, поэтому «Все покупки» подходит.
+         * Но только если текст действительно нашёл хотя бы одну категорию:
+         * иначе это опечатка или мусорный ввод, и рекомендаций быть не должно.
+         */
+        return !target.categoryIds().isEmpty();
+    }
+
     private int comparePercent(ActiveSelectionDto first, ActiveSelectionDto second) {
         if (first.percent() == null) {
             return second.percent() == null ? 0 : -1;
@@ -76,103 +146,19 @@ public class CashbackAdvisorService {
         return first.percent().compareTo(second.percent());
     }
 
-    private List<ActiveSelectionDto> matchByMccCode(String mccCode, List<ActiveSelectionDto> selections) {
-        Set<Long> excludedBankIds = bankExcludedMccRepository.findBankIdsByMccCode(mccCode);
-
-        Set<BankCategoryKey> allowedPairs = bankCategoryMccRepository.findByMccCode(mccCode).stream()
-                .filter(mcc -> !excludedBankIds.contains(mcc.getBankCategory().getBank().getId()))
-                .map(mcc -> new BankCategoryKey(
-                        mcc.getBankCategory().getBank().getId(),
-                        mcc.getBankCategory().getCategory().getId()))
-                .collect(Collectors.toSet());
-
-        List<ActiveSelectionDto> matched = selections.stream()
-                .filter(selection -> !isAllPurchases(selection))
-                .filter(selection -> allowedPairs.contains(
-                        new BankCategoryKey(selection.bankId(), selection.categoryId())))
-                .toList();
-        return withAllPurchases(matched, selections, excludedBankIds);
-    }
-
-    private List<ActiveSelectionDto> matchByText(String text, List<ActiveSelectionDto> selections) {
-        List<Store> stores = storeRepository.findByNameOrAliasContaining(escapeLike(text));
-        if (stores.isEmpty()) {
-            return matchByCategory(text, selections);
-        }
-
-        Set<String> mccCodes = stores.stream()
-                .map(Store::getMccCode)
-                .filter(mccCode -> mccCode != null && !mccCode.isBlank())
-                .map(String::trim)
-                .collect(Collectors.toSet());
-
-        List<ActiveSelectionDto> byMcc = matchByMccCodes(mccCodes, selections);
-        if (!byMcc.isEmpty()) {
-            return byMcc;
-        }
-
-        Set<Long> storeCategoryIds = stores.stream()
-                .map(Store::getCategory)
-                .filter(Objects::nonNull)
-                .map(Category::getId)
-                .collect(Collectors.toSet());
-        return matchByCategoryIds(storeCategoryIds, selections);
-    }
-
-    private List<ActiveSelectionDto> matchByMccCodes(Set<String> mccCodes,
-                                                     List<ActiveSelectionDto> selections) {
-        if (mccCodes.isEmpty()) {
-            return List.of();
-        }
-
-        Set<Long> excludedBankIds = bankExcludedMccRepository.findBankIdsByMccCodes(mccCodes);
-        Set<BankCategoryKey> allowedPairs = bankCategoryMccRepository.findByMccCodeIn(mccCodes).stream()
-                .filter(mcc -> !excludedBankIds.contains(mcc.getBankCategory().getBank().getId()))
-                .map(mcc -> new BankCategoryKey(
-                        mcc.getBankCategory().getBank().getId(),
-                        mcc.getBankCategory().getCategory().getId()))
-                .collect(Collectors.toSet());
-
-        List<ActiveSelectionDto> matched = selections.stream()
-                .filter(selection -> !isAllPurchases(selection))
-                .filter(selection -> allowedPairs.contains(
-                        new BankCategoryKey(selection.bankId(), selection.categoryId())))
-                .toList();
-        return withAllPurchases(matched, selections, excludedBankIds);
-    }
-
-    private List<ActiveSelectionDto> withAllPurchases(List<ActiveSelectionDto> matched,
-                                                      List<ActiveSelectionDto> selections,
-                                                      Set<Long> excludedBankIds) {
-        List<ActiveSelectionDto> result = new ArrayList<>(matched);
-        selections.stream()
-                .filter(this::isAllPurchases)
-                .filter(selection -> !excludedBankIds.contains(selection.bankId()))
-                .forEach(result::add);
-        return result;
-    }
-
     private boolean isAllPurchases(ActiveSelectionDto selection) {
         return ALL_PURCHASES_SLUG.equals(selection.categorySlug());
-    }
-
-    private List<ActiveSelectionDto> matchByCategory(String name, List<ActiveSelectionDto> selections) {
-        Set<Long> matchedCategoryIds = categoryRepository.findByNameOrAliasContaining(escapeLike(name)).stream()
-                .map(Category::getId)
-                .collect(Collectors.toSet());
-        return matchByCategoryIds(matchedCategoryIds, selections);
-    }
-
-    private List<ActiveSelectionDto> matchByCategoryIds(Set<Long> categoryIds,
-                                                        List<ActiveSelectionDto> selections) {
-        return selections.stream()
-                .filter(selection -> categoryIds.contains(selection.categoryId()))
-                .toList();
     }
 
     private String escapeLike(String value) {
         return value.replace("!", "!!")
                 .replace("%", "!%")
                 .replace("_", "!_");
+    }
+
+    private record SearchTarget(Set<Long> categoryIds,
+                                Set<BankCategoryKey> allowedPairs,
+                                boolean mccKnown,
+                                Set<Long> excludedBankIds) {
     }
 }

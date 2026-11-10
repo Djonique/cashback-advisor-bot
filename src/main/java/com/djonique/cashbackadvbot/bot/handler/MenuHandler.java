@@ -42,7 +42,7 @@ public class MenuHandler {
             "Введите сумму доната в рублях (целое число, минимум 100 ₽):";
     private static final String SEND_ERROR_TEXT = "Не удалось отправить сообщение";
     private static final String UNKNOWN_CALLBACK_TEXT = "Кнопка устарела, начните заново";
-    private static final String NEW_CARD_MENU_TEXT = "Выберите банк для оформления карты:";
+    private static final String NEW_CARD_MENU_TEXT = "Выберите банк, в котором Вы хотите оформить новую карту:";
     private static final String NEW_CARD_LINK_TEMPLATE =
             "Для оформления карты %s перейдите по ссылке: %s";
     private static final String UNKNOWN_BANK_TEXT = "Неизвестный банк";

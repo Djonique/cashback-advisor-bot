@@ -2,6 +2,7 @@ package com.djonique.cashbackadvbot.repository;
 
 import com.djonique.cashbackadvbot.bot.state.DialogState;
 import com.djonique.cashbackadvbot.domain.AppUser;
+import com.djonique.cashbackadvbot.domain.Store;
 import com.djonique.cashbackadvbot.domain.UserState;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Tag;
@@ -53,8 +54,17 @@ class RepositoryQueryIntegrationTest {
     @Test
     void shouldExecuteCatalogQueries() {
         assertThat(bankCategoryRepository.findAllByBankId(1L)).isNotNull();
-        assertThat(categoryRepository.findByNameOrAliasContaining("супер")).isNotNull();
-        assertThat(storeRepository.findByNameOrAliasContaining("пятерочка")).isNotEmpty();
+        assertThat(categoryRepository.findByNameOrAlias("Супермаркеты")).isNotEmpty();
+        assertThat(categoryRepository.findByNameOrAlias("продукты")).isNotEmpty();
+        assertThat(categoryRepository.findByNameOrAlias("па")).isEmpty();
+        assertThat(storeRepository.findByNameOrAlias("пятерочка")).isNotEmpty();
+        assertThat(storeRepository.findByNameOrAlias("ПАПА ДЖОНС"))
+                .singleElement()
+                .extracting(Store::getMccCode)
+                .isEqualTo("5814");
+        assertThat(storeRepository.findByNameOrAlias("па")).isEmpty();
+        assertThat(storeRepository.findByNameOrAlias("ян")).isEmpty();
+        assertThat(storeRepository.findByNameOrAlias("сам")).isEmpty();
     }
 
     @Test

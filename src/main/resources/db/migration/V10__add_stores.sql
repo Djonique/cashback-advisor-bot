@@ -386,7 +386,7 @@ INSERT INTO store (name, aliases, category_id, mcc_code) VALUES
 ('Пленка', 'пленка, plenka', (SELECT id FROM category WHERE slug = 'photo_video'), '5946'),
 
 -- ============================================================
--- 23. ТАКСИ (MCC 4121)
+-- 23. ТАКСИ (MCC 4121, Яндекс Такси — 3990)
 -- ============================================================
 ('Maxim', 'максим, maxim', (SELECT id FROM category WHERE slug = 'taxi'), '4121'),
 ('Ситимобил', 'ситимобил, citimobil', (SELECT id FROM category WHERE slug = 'taxi'), '4121'),
@@ -394,6 +394,7 @@ INSERT INTO store (name, aliases, category_id, mcc_code) VALUES
 ('Таксовичкоф', 'таксовичкоф, taksiovichkof', (SELECT id FROM category WHERE slug = 'taxi'), '4121'),
 ('Drivee', 'драйви, drivee, inDrive', (SELECT id FROM category WHERE slug = 'taxi'), '4121'),
 ('Gett', 'гетт, gett', (SELECT id FROM category WHERE slug = 'taxi'), '4121'),
+('Яндекс Такси', 'яндекс такси, yandex taxi, такси, яндекс го, yandex go', (SELECT id FROM category WHERE slug = 'taxi'), '3990'),
 
 -- ============================================================
 -- 24. КАРШЕРИНГ (MCC 7512)
@@ -566,15 +567,14 @@ INSERT INTO store (name, aliases, category_id, mcc_code) VALUES
 -- ============================================================
 -- 35. ДОСТАВКА ЕДЫ И ПРОДУКТОВ (MCC 5411 / 5814)
 -- ============================================================
-('Яндекс Еда', 'яндекс еда, yandex eda', (SELECT id FROM category WHERE slug = 'supermarkets'), '5814'),
-('Delivery Club', 'деливери клаб, delivery club', (SELECT id FROM category WHERE slug = 'supermarkets'), '5814'),
+('Яндекс Еда', 'яндекс еда, yandex eda', (SELECT id FROM category WHERE slug = 'fastfood'), '5814'),
+('Delivery Club', 'деливери клаб, delivery club', (SELECT id FROM category WHERE slug = 'fastfood'), '5814'),
 ('Купер', 'купер, kuper', (SELECT id FROM category WHERE slug = 'supermarkets'), '5411'),
 
 -- ============================================================
 -- 36. ЭКОСИСТЕМА ЯНДЕКСА (MCC 3990)
 -- ============================================================
 ('Яндекс Маркет', 'яндекс маркет, yandex market', (SELECT id FROM category WHERE slug = 'yandex_ecosystem'), '3990'),
-('Яндекс Go', 'яндекс го, yandex go, яндекс такси', (SELECT id FROM category WHERE slug = 'yandex_ecosystem'), '3990'),
 ('Яндекс Драйв', 'яндекс драйв, yandex drive', (SELECT id FROM category WHERE slug = 'yandex_ecosystem'), '3990'),
 ('Яндекс Путешествия', 'яндекс путешествия, yandex travel', (SELECT id FROM category WHERE slug = 'yandex_ecosystem'), '3990'),
 ('Яндекс Практикум', 'яндекс практикум, yandex praktikum', (SELECT id FROM category WHERE slug = 'yandex_ecosystem'), '3990'),

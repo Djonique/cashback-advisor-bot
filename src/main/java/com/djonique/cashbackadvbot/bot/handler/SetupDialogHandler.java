@@ -107,7 +107,7 @@ public class SetupDialogHandler {
         }
 
         Long categoryId = pendingCategories.getFirst();
-        String categoryName = bankCatalogService.findCategoryName(categoryId).orElse(null);
+        String categoryName = bankCatalogService.findLocalCategoryName(context.bankId(), categoryId).orElse(null);
 
         if (categoryName == null) {
             log.warn("Категория из контекста не найдена: categoryId={}, пропускаем", categoryId);
