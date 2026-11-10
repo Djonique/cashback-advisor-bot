@@ -151,7 +151,7 @@ class CashbackAdvisorServiceTest {
         Store store = new Store();
         store.setName("Пятёрочка");
         store.setMccCode(MCC);
-        when(storeRepository.findByNameOrAlias("пятёрочка"))
+        when(storeRepository.findAllWithCategory())
                 .thenReturn(List.of(store));
         when(bankCategoryMccRepository.findByMccCodeIn(Set.of(MCC)))
                 .thenReturn(List.of());
@@ -217,16 +217,16 @@ class CashbackAdvisorServiceTest {
         when(selectionService.getActiveSelections(1L))
                 .thenReturn(List.of(selection(1L, 10L, "5")));
         Store store = new Store();
-        store.setName("РџСЏС‚С‘СЂРѕС‡РєР°");
+        store.setName("Пятёрочка");
         store.setMccCode(MCC);
-        when(storeRepository.findByNameOrAlias("РїСЏС‚РµСЂРѕС‡РєР°"))
+        when(storeRepository.findAllWithCategory())
                 .thenReturn(List.of(store));
         when(bankCategoryMccRepository.findByMccCodeIn(Set.of(MCC)))
                 .thenReturn(List.of(mccRow(1L, 10L)));
         when(bankExcludedMccRepository.findBankIdsByMccCodes(Set.of(MCC)))
                 .thenReturn(Set.of());
 
-        List<RecommendationDto> result = service.recommend(1L, "РїСЏС‚РµСЂРѕС‡РєР°");
+        List<RecommendationDto> result = service.recommend(1L, "пятёрочка");
 
         assertThat(result).singleElement()
                 .satisfies(recommendation -> {
@@ -248,7 +248,7 @@ class CashbackAdvisorServiceTest {
         store.setName("Яндекс Такси");
         store.setMccCode("3990");
         store.setCategory(taxi);
-        when(storeRepository.findByNameOrAlias("яндекс такси"))
+        when(storeRepository.findAllWithCategory())
                 .thenReturn(List.of(store));
         when(bankCategoryMccRepository.findByMccCodeIn(Set.of("3990")))
                 .thenReturn(List.of(
@@ -272,19 +272,19 @@ class CashbackAdvisorServiceTest {
                 .thenReturn(List.of(selection(1L, 10L, "5")));
         Category storeCategory = new Category();
         storeCategory.setId(10L);
-        storeCategory.setName("РЎСѓРїРµСЂРјР°СЂРєРµС‚С‹");
+        storeCategory.setName("Супермаркеты");
         Store store = new Store();
-        store.setName("РџСЏС‚С‘СЂРѕС‡РєР°");
+        store.setName("Пятёрочка");
         store.setMccCode(MCC);
         store.setCategory(storeCategory);
-        when(storeRepository.findByNameOrAlias("РїСЏС‚РµСЂРѕС‡РєР°"))
+        when(storeRepository.findAllWithCategory())
                 .thenReturn(List.of(store));
         when(bankCategoryMccRepository.findByMccCodeIn(Set.of(MCC)))
                 .thenReturn(List.of());
         when(bankExcludedMccRepository.findBankIdsByMccCodes(Set.of(MCC)))
                 .thenReturn(Set.of());
 
-        List<RecommendationDto> result = service.recommend(1L, "РїСЏС‚РµСЂРѕС‡РєР°");
+        List<RecommendationDto> result = service.recommend(1L, "пятёрочка");
 
         assertThat(result).isEmpty();
     }
@@ -298,7 +298,7 @@ class CashbackAdvisorServiceTest {
         Category category = new Category();
         category.setId(10L);
         category.setName("Супермаркеты");
-        when(storeRepository.findByNameOrAlias("продукты"))
+        when(storeRepository.findAllWithCategory())
                 .thenReturn(List.of());
         when(categoryRepository.findByNameOrAlias("продукты"))
                 .thenReturn(List.of(category));
@@ -314,7 +314,7 @@ class CashbackAdvisorServiceTest {
     void shouldNotRecommendAnything_whenTextMatchesNoStoreAndNoCategory() {
         when(selectionService.getActiveSelections(1L))
                 .thenReturn(List.of(allPurchases(1L, "5")));
-        when(storeRepository.findByNameOrAlias("ААААААА"))
+        when(storeRepository.findAllWithCategory())
                 .thenReturn(List.of());
         when(categoryRepository.findByNameOrAlias("ААААААА"))
                 .thenReturn(List.of());
@@ -325,18 +325,61 @@ class CashbackAdvisorServiceTest {
     }
 
     @Test
-    void shouldEscapeLikeWildcards_whenSearchingByText() {
+    void shouldPassSpecialCharactersToCategoryQuery() {
         when(selectionService.getActiveSelections(1L))
                 .thenReturn(List.of(selection(1L, 10L, "5")));
-        when(storeRepository.findByNameOrAlias("50!%!_!!"))
+        when(storeRepository.findAllWithCategory())
                 .thenReturn(List.of());
-        when(categoryRepository.findByNameOrAlias("50!%!_!!"))
+        when(categoryRepository.findByNameOrAlias("50%_!"))
                 .thenReturn(List.of());
 
         assertThat(service.recommend(1L, "50%_!")).isEmpty();
 
-        verify(storeRepository).findByNameOrAlias("50!%!_!!");
-        verify(categoryRepository).findByNameOrAlias("50!%!_!!");
+        verify(categoryRepository).findByNameOrAlias("50%_!");
+    }
+
+    @Test
+    void shouldNotMatchStore_whenInputIsOnlyPartOfName() {
+        when(selectionService.getActiveSelections(1L))
+                .thenReturn(List.of(allPurchases(1L, "5")));
+        Store samokat = new Store();
+        samokat.setName("Самокат");
+        samokat.setAliases("самокат, samokat");
+        samokat.setMccCode("3991");
+        Store samberi = new Store();
+        samberi.setName("Самбери");
+        samberi.setAliases("самбери, samberi");
+        samberi.setMccCode("5411");
+        when(storeRepository.findAllWithCategory())
+                .thenReturn(List.of(samokat, samberi));
+        when(categoryRepository.findByNameOrAlias("сам"))
+                .thenReturn(List.of());
+
+        assertThat(service.recommend(1L, "сам")).isEmpty();
+    }
+
+    @Test
+    void shouldMatchStoreByAliasCaseInsensitively() {
+        when(selectionService.getActiveSelections(1L))
+                .thenReturn(List.of(selection(1L, 10L, "5")));
+        Store store = new Store();
+        store.setName("Papa John’s");
+        store.setAliases("папа джонс, papa johns");
+        store.setMccCode("5814");
+        when(storeRepository.findAllWithCategory())
+                .thenReturn(List.of(store));
+        when(bankCategoryMccRepository.findByMccCodeIn(Set.of("5814")))
+                .thenReturn(List.of(mccRow("5814", 1L, 10L)));
+        when(bankExcludedMccRepository.findBankIdsByMccCodes(Set.of("5814")))
+                .thenReturn(Set.of());
+
+        List<RecommendationDto> result = service.recommend(1L, "ПАПА ДЖОНС");
+
+        assertThat(result).singleElement()
+                .satisfies(recommendation -> {
+                    assertThat(recommendation.bankName()).isEqualTo("Bank1");
+                    assertThat(recommendation.percent()).isEqualByComparingTo("5");
+                });
     }
 
     private ActiveSelectionDto selection(Long bankId, Long categoryId, String percent) {

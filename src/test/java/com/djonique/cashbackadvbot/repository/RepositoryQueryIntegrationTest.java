@@ -57,14 +57,16 @@ class RepositoryQueryIntegrationTest {
         assertThat(categoryRepository.findByNameOrAlias("Супермаркеты")).isNotEmpty();
         assertThat(categoryRepository.findByNameOrAlias("продукты")).isNotEmpty();
         assertThat(categoryRepository.findByNameOrAlias("па")).isEmpty();
-        assertThat(storeRepository.findByNameOrAlias("пятерочка")).isNotEmpty();
-        assertThat(storeRepository.findByNameOrAlias("ПАПА ДЖОНС"))
+
+        // Магазины грузятся целиком вместе с категориями: точное сравнение — в сервисе.
+        assertThat(storeRepository.findAllWithCategory())
+                .hasSize(417)
+                .allSatisfy(store -> assertThat(store.getCategory()).isNotNull());
+        assertThat(storeRepository.findAllWithCategory())
+                .filteredOn(store -> "Пятёрочка".equals(store.getName()))
                 .singleElement()
                 .extracting(Store::getMccCode)
-                .isEqualTo("5814");
-        assertThat(storeRepository.findByNameOrAlias("па")).isEmpty();
-        assertThat(storeRepository.findByNameOrAlias("ян")).isEmpty();
-        assertThat(storeRepository.findByNameOrAlias("сам")).isEmpty();
+                .isEqualTo("5411");
     }
 
     @Test

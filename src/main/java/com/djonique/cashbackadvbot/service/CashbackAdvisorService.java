@@ -78,7 +78,7 @@ public class CashbackAdvisorService {
             return targetByMccCodes(Set.of(input), Set.of());
         }
 
-        List<Store> stores = storeRepository.findByNameOrAlias(escapeLike(input));
+        List<Store> stores = findStores(input);
         if (!stores.isEmpty()) {
             Set<String> mccCodes = stores.stream()
                     .map(Store::getMccCode)
@@ -93,10 +93,30 @@ public class CashbackAdvisorService {
             return targetByMccCodes(mccCodes, storeCategoryIds);
         }
 
-        Set<Long> categoryIds = categoryRepository.findByNameOrAlias(escapeLike(input)).stream()
+        Set<Long> categoryIds = categoryRepository.findByNameOrAlias(input).stream()
                 .map(Category::getId)
                 .collect(Collectors.toSet());
         return new SearchTarget(categoryIds, Set.of(), false, Set.of());
+    }
+
+    private List<Store> findStores(String text) {
+        return storeRepository.findAllWithCategory().stream()
+                .filter(store -> matchesStore(store, text))
+                .toList();
+    }
+
+    private boolean matchesStore(Store store, String text) {
+        if (store.getName().equalsIgnoreCase(text)) {
+            return true;
+        }
+        String aliases = store.getAliases();
+        if (aliases == null || aliases.isBlank()) {
+            return false;
+        }
+        // Алиасы хранятся одной строкой через запятую — сравниваем каждый целиком.
+        return Arrays.stream(aliases.split(","))
+                .map(String::trim)
+                .anyMatch(alias -> alias.equalsIgnoreCase(text));
     }
 
     private SearchTarget targetByMccCodes(Set<String> mccCodes, Set<Long> categoryFilter) {
@@ -148,12 +168,6 @@ public class CashbackAdvisorService {
 
     private boolean isAllPurchases(ActiveSelectionDto selection) {
         return ALL_PURCHASES_SLUG.equals(selection.categorySlug());
-    }
-
-    private String escapeLike(String value) {
-        return value.replace("!", "!!")
-                .replace("%", "!%")
-                .replace("_", "!_");
     }
 
     private record SearchTarget(Set<Long> categoryIds,
