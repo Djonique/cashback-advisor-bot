@@ -40,7 +40,7 @@ app:
     vtb: "https://i.spbvtb.ru/bbct4b55"
     ozon: "https://ozon.ru/fintech/promo/ref/EOYON8JQH"
     yandex: "https://bank.yandex.ru/invite?refid=7U2phFHXdLi"
-    wb: "https://www.wildberries.ru/wb-bank/reference/k2BegFiT9UTW"
+    wb: "https://www.wildberries.ru/wb-bank/reference/pr8I62sujQR7"
   telegram:
     bot-token: ${TELEGRAM_BOT_TOKEN}
     bot-username: ${TELEGRAM_BOT_USERNAME:CashbackAdvBot}
